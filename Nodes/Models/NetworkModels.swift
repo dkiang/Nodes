@@ -42,6 +42,7 @@ class NetworkState: ObservableObject {
     @Published var connectionStartNode: StudentNode?
     @Published var scale: CGFloat = 1.0
     @Published var offset: CGSize = .zero
+    @Published var isPathFindingMode: Bool = false
     
     // Path finding
     @Published var startNode: StudentNode?

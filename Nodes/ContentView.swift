@@ -13,7 +13,6 @@ struct ContentView: View {
     @StateObject private var networkState = NetworkState()
     @State private var showingAddStudent = false
     @State private var newStudentName = ""
-    @State private var isPathFindingMode = false
     @State private var showingPathAlert = false
 
     var body: some View {
@@ -31,14 +30,14 @@ struct ContentView: View {
                         }
                         .buttonStyle(.bordered)
                         
-                        Button(action: { isPathFindingMode.toggle() }) {
-                            Label(isPathFindingMode ? "Cancel Path" : "Find Path", systemImage: "arrow.triangle.branch")
+                        Button(action: { networkState.isPathFindingMode.toggle() }) {
+                            Label(networkState.isPathFindingMode ? "Cancel Path" : "Find Path", systemImage: "arrow.triangle.branch")
                         }
                         .buttonStyle(.bordered)
-                        .tint(isPathFindingMode ? .red : .blue)
+                        .tint(networkState.isPathFindingMode ? .red : .blue)
                     }
                     
-                    if isPathFindingMode {
+                    if networkState.isPathFindingMode {
                         Text("Select start and end nodes to find paths")
                             .font(.caption)
                             .foregroundColor(.secondary)
