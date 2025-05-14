@@ -399,24 +399,62 @@ struct NetworkGraphView: View {
     }
     
     private func handlePathFindingTap(_ node: StudentNode) {
+        print("\n=== Path Finding Tap ===")
+        print("Tapped node: \(node.name)")
+        print("Current state - Start: \(pathFindingStartNode?.name ?? "none"), End: \(pathFindingEndNode?.name ?? "none")")
+        
+        // Format connections for display
+        let connectionNames = node.connections.compactMap { conn -> String? in
+            if let targetNode = networkState.nodes.first(where: { $0.id == conn.toNodeId }) {
+                return targetNode.name
+            }
+            return nil
+        }
+        print("Node connections: \(connectionNames.joined(separator: ", "))")
+        
         if pathFindingStartNode == nil {
+            // First tap - set as start node
+            print("\nSetting \(node.name) as start node")
             pathFindingStartNode = node
             networkState.startNode = node
-        } else if pathFindingEndNode == nil && node.id != pathFindingStartNode?.id {
-            // Check if there's a possible path before setting the end node
+            pathFindingEndNode = nil
+            currentPath = []
+            networkState.endNode = nil
+            networkState.currentPath = []
+        } else if node.id == pathFindingStartNode?.id {
+            // Tapping start node again - reset
+            print("\nTapped start node again, resetting selection")
+            pathFindingStartNode = nil
+            pathFindingEndNode = nil
+            currentPath = []
+            networkState.startNode = nil
+            networkState.endNode = nil
+            networkState.currentPath = []
+        } else if pathFindingEndNode == nil {
+            // Second tap - try to set as end node
             if let start = pathFindingStartNode {
+                print("\nAttempting to find path from \(start.name) to \(node.name)")
                 let paths = networkState.findPaths(from: start, to: node)
                 if !paths.isEmpty {
-                    pathFindingEndNode = node
-                    networkState.endNode = node
+                    // Valid path exists - set as end node
+                    print("\nFound valid path:")
                     if let shortestPath = paths.first {
+                        let pathString = shortestPath.map { $0.name }.joined(separator: " -> ")
+                        print("Path: \(pathString)")
+                        print("Path length: \(shortestPath.count) nodes")
                         currentPath = shortestPath
                         networkState.currentPath = shortestPath
                     }
+                    pathFindingEndNode = node
+                    networkState.endNode = node
+                } else {
+                    // No valid path - ignore the tap
+                    print("\nNo valid path found from \(start.name) to \(node.name)")
                 }
             }
         } else {
-            // Reset path finding state
+            // Already have both start and end - reset to new start
+            print("\nResetting to new start node: \(node.name)")
             pathFindingStartNode = node
             pathFindingEndNode = nil
             currentPath = []
@@ -424,6 +462,7 @@ struct NetworkGraphView: View {
             networkState.endNode = nil
             networkState.currentPath = []
         }
+        print("=== End Path Finding Tap ===\n")
     }
     
     private func handleConnectionTap(_ node: StudentNode) {

@@ -95,10 +95,13 @@ class NetworkState: ObservableObject {
         
         do {
             let nodeEntities = try viewContext.fetch(fetchRequest)
+            print("DEBUG: Loading \(nodeEntities.count) nodes from CoreData")
+            
             nodes = nodeEntities.compactMap { entity -> StudentNode? in
                 guard let nodeEntity = entity as? NSManagedObject,
                       let id = nodeEntity.value(forKey: "id") as? UUID,
                       let name = nodeEntity.value(forKey: "name") as? String else {
+                    print("DEBUG: Failed to load node - missing required attributes")
                     return nil
                 }
                 
@@ -110,6 +113,7 @@ class NetworkState: ObservableObject {
                     guard let connId = conn.value(forKey: "id") as? UUID,
                           let toNodeId = conn.value(forKey: "toNodeId") as? UUID,
                           let commonInterest = conn.value(forKey: "commonInterest") as? String else {
+                        print("DEBUG: Failed to load connection - missing required attributes")
                         return nil
                     }
                     
@@ -121,6 +125,11 @@ class NetworkState: ObservableObject {
                     )
                 } ?? []
                 
+                print("DEBUG: Loaded node \(name) with \(connections.count) connections")
+                for conn in connections {
+                    print("DEBUG:   - Connection to \(conn.toNodeId) with interest: \(conn.commonInterest)")
+                }
+                
                 return StudentNode(
                     id: id,
                     name: name,
@@ -129,6 +138,19 @@ class NetworkState: ObservableObject {
                     connections: connections
                 )
             }
+            
+            // Verify connections are bidirectional
+            for node in nodes {
+                for connection in node.connections {
+                    if let targetNode = nodes.first(where: { $0.id == connection.toNodeId }) {
+                        let hasReverseConnection = targetNode.connections.contains { $0.toNodeId == node.id }
+                        if !hasReverseConnection {
+                            print("DEBUG: Warning - Connection from \(node.name) to \(targetNode.name) is not bidirectional")
+                        }
+                    }
+                }
+            }
+            
         } catch {
             print("Error loading nodes: \(error)")
         }
@@ -207,61 +229,107 @@ class NetworkState: ObservableObject {
     }
     
     func addConnection(from: StudentNode, to: StudentNode, commonInterest: String) {
-        // Remove existing connection if any
+        print("DEBUG: Adding connection from \(from.name) to \(to.name) with interest: \(commonInterest)")
+        
+        // Remove existing connections if any
         if let existingConnection = findConnection(from: from, to: to) {
+            print("DEBUG: Removing existing connection before adding new one")
             removeConnection(existingConnection, from: from, to: to)
+        }
+        if let existingReverseConnection = findConnection(from: to, to: from) {
+            print("DEBUG: Removing existing reverse connection before adding new one")
+            removeConnection(existingReverseConnection, from: to, to: from)
         }
         
         let connection = Connection(fromNodeId: from.id, toNodeId: to.id, commonInterest: commonInterest)
+        let reverseConnection = Connection(fromNodeId: to.id, toNodeId: from.id, commonInterest: commonInterest)
         
-        // Add to CoreData
+        // Add to CoreData for both directions
         let fetchRequest = NSFetchRequest<NSManagedObject>(entityName: "NodeEntity")
-        fetchRequest.predicate = NSPredicate(format: "id == %@", from.id as CVarArg)
         
         do {
-            if let fromEntity = try viewContext.fetch(fetchRequest).first {
-                let connectionEntity = NSEntityDescription.insertNewObject(forEntityName: "ConnectionEntity", into: viewContext)
-                connectionEntity.setValue(connection.id, forKey: "id")
-                connectionEntity.setValue(to.id, forKey: "toNodeId")
-                connectionEntity.setValue(commonInterest, forKey: "commonInterest")
-                connectionEntity.setValue(fromEntity, forKey: "fromNode")
-                
-                saveContext()
+            // Get both node entities
+            fetchRequest.predicate = NSPredicate(format: "id == %@ OR id == %@", from.id as CVarArg, to.id as CVarArg)
+            let nodeEntities = try viewContext.fetch(fetchRequest)
+            
+            guard let fromEntity = nodeEntities.first(where: { ($0.value(forKey: "id") as? UUID) == from.id }),
+                  let toEntity = nodeEntities.first(where: { ($0.value(forKey: "id") as? UUID) == to.id }) else {
+                print("DEBUG: Error - Could not find both node entities in CoreData")
+                return
             }
+            
+            // Create forward connection
+            let forwardConnectionEntity = NSEntityDescription.insertNewObject(forEntityName: "ConnectionEntity", into: viewContext)
+            forwardConnectionEntity.setValue(connection.id, forKey: "id")
+            forwardConnectionEntity.setValue(to.id, forKey: "toNodeId")
+            forwardConnectionEntity.setValue(commonInterest, forKey: "commonInterest")
+            forwardConnectionEntity.setValue(fromEntity, forKey: "fromNode")
+            
+            // Create reverse connection
+            let reverseConnectionEntity = NSEntityDescription.insertNewObject(forEntityName: "ConnectionEntity", into: viewContext)
+            reverseConnectionEntity.setValue(reverseConnection.id, forKey: "id")
+            reverseConnectionEntity.setValue(from.id, forKey: "toNodeId")
+            reverseConnectionEntity.setValue(commonInterest, forKey: "commonInterest")
+            reverseConnectionEntity.setValue(toEntity, forKey: "fromNode")
+            
+            saveContext()
+            print("DEBUG: Successfully saved bidirectional connections to CoreData")
         } catch {
-            print("Error adding connection: \(error)")
+            print("Error adding connections: \(error)")
+            return
         }
         
+        // Update in-memory nodes
         if let fromIndex = nodes.firstIndex(where: { $0.id == from.id }) {
             nodes[fromIndex].connections.append(connection)
+            print("DEBUG: Added connection to \(from.name)'s connections list")
         }
         if let toIndex = nodes.firstIndex(where: { $0.id == to.id }) {
-            nodes[toIndex].connections.append(Connection(fromNodeId: to.id, toNodeId: from.id, commonInterest: commonInterest))
+            nodes[toIndex].connections.append(reverseConnection)
+            print("DEBUG: Added reverse connection to \(to.name)'s connections list")
         }
+        
+        // Push both connections to undo stack
         pushUndoAction(.addConnection(connection, from: from.id, to: to.id))
+        pushUndoAction(.addConnection(reverseConnection, from: to.id, to: from.id))
     }
     
     func removeConnection(_ connection: Connection, from: StudentNode, to: StudentNode) {
-        // Remove from CoreData
+        print("DEBUG: Removing connection from \(from.name) to \(to.name)")
+        
+        // Remove both directions from CoreData
         let fetchRequest = NSFetchRequest<NSManagedObject>(entityName: "ConnectionEntity")
-        fetchRequest.predicate = NSPredicate(format: "id == %@", connection.id as CVarArg)
+        fetchRequest.predicate = NSPredicate(format: "(id == %@) OR (fromNode.id == %@ AND toNodeId == %@)",
+                                           connection.id as CVarArg,
+                                           to.id as CVarArg,
+                                           from.id as CVarArg)
         
         do {
-            if let entity = try viewContext.fetch(fetchRequest).first {
+            let connections = try viewContext.fetch(fetchRequest)
+            for entity in connections {
                 viewContext.delete(entity)
-                saveContext()
             }
+            saveContext()
+            print("DEBUG: Successfully removed bidirectional connections from CoreData")
         } catch {
-            print("Error removing connection: \(error)")
+            print("Error removing connections: \(error)")
         }
         
+        // Remove from in-memory nodes
         if let fromIndex = nodes.firstIndex(where: { $0.id == from.id }) {
             nodes[fromIndex].connections.removeAll { $0.id == connection.id }
+            print("DEBUG: Removed connection from \(from.name)'s connections list")
         }
         if let toIndex = nodes.firstIndex(where: { $0.id == to.id }) {
             nodes[toIndex].connections.removeAll { $0.toNodeId == from.id }
+            print("DEBUG: Removed reverse connection from \(to.name)'s connections list")
         }
+        
+        // Push both removals to undo stack
         pushUndoAction(.removeConnection(connection, from: from.id, to: to.id))
+        if let reverseConnection = findConnection(from: to, to: from) {
+            pushUndoAction(.removeConnection(reverseConnection, from: to.id, to: from.id))
+        }
     }
     
     private func findConnection(from: StudentNode, to: StudentNode) -> Connection? {
@@ -406,11 +474,58 @@ class NetworkState: ObservableObject {
     }
     
     func findPaths(from start: StudentNode, to end: StudentNode) -> [[StudentNode]] {
+        print("DEBUG: Finding paths from \(start.name) to \(end.name)")
+        print("DEBUG: Start node connections: \(start.connections.map { "\($0.toNodeId)" })")
+        print("DEBUG: End node connections: \(end.connections.map { "\($0.toNodeId)" })")
+        
         var paths: [[StudentNode]] = []
         var visited = Set<UUID>()
+        var queue: [(node: StudentNode, path: [StudentNode])] = [(start, [start])]
+        var foundShortestPath = false
+        
+        while !queue.isEmpty && !foundShortestPath {
+            let (current, path) = queue.removeFirst()
+            print("DEBUG: BFS visiting \(current.name), current path: \(path.map { $0.name })")
+            
+            if current.id == end.id {
+                print("DEBUG: Found shortest path to \(end.name): \(path.map { $0.name })")
+                paths.append(path)
+                foundShortestPath = true
+                continue
+            }
+            
+            visited.insert(current.id)
+            
+            // Get all unvisited neighbors
+            let neighbors = current.connections.compactMap { connection -> StudentNode? in
+                guard let nextNode = nodes.first(where: { $0.id == connection.toNodeId }),
+                      nextNode.isActive,
+                      !visited.contains(nextNode.id) else {
+                    return nil
+                }
+                return nextNode
+            }
+            
+            // Add all neighbors to the queue
+            for neighbor in neighbors {
+                print("DEBUG: Adding neighbor \(neighbor.name) to queue")
+                queue.append((neighbor, path + [neighbor]))
+            }
+        }
+        
+        // If we found a path, return it. Otherwise, try DFS to find any path
+        if !paths.isEmpty {
+            print("DEBUG: Found shortest path with length \(paths[0].count)")
+            return paths
+        }
+        
+        print("DEBUG: No path found with BFS, trying DFS...")
+        // Fallback to DFS to find any path if BFS didn't find one
+        visited.removeAll()
         
         func dfs(current: StudentNode, path: [StudentNode]) {
             if current.id == end.id {
+                print("DEBUG: Found path with DFS: \(path.map { $0.name })")
                 paths.append(path)
                 return
             }
@@ -418,10 +533,22 @@ class NetworkState: ObservableObject {
             visited.insert(current.id)
             
             for connection in current.connections {
-                guard let nextNode = nodes.first(where: { $0.id == connection.toNodeId }),
-                      nextNode.isActive,
-                      !visited.contains(nextNode.id) else { continue }
+                guard let nextNode = nodes.first(where: { $0.id == connection.toNodeId }) else {
+                    print("DEBUG: Warning - connection to \(connection.toNodeId) points to non-existent node")
+                    continue
+                }
                 
+                guard nextNode.isActive else {
+                    print("DEBUG: Skipping inactive node \(nextNode.name)")
+                    continue
+                }
+                
+                guard !visited.contains(nextNode.id) else {
+                    print("DEBUG: Skipping already visited node \(nextNode.name)")
+                    continue
+                }
+                
+                print("DEBUG: Following connection to \(nextNode.name)")
                 dfs(current: nextNode, path: path + [nextNode])
             }
             
@@ -429,6 +556,7 @@ class NetworkState: ObservableObject {
         }
         
         dfs(current: start, path: [start])
+        print("DEBUG: Found \(paths.count) paths from \(start.name) to \(end.name)")
         return paths
     }
 } 
