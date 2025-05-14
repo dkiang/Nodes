@@ -156,7 +156,10 @@ struct NodeGestureView: View {
     let dragState: CGSize
     let isStartNode: Bool
     let isEndNode: Bool
+    let isPathFindingMode: Bool
+    let onDragStart: (StudentNode) -> Void
     let onDrag: (StudentNode, CGSize) -> Void
+    let onDragEnd: (StudentNode) -> Void
     let onTap: (StudentNode) -> Void
     @GestureState private var localDragState = CGSize.zero
     
@@ -172,9 +175,21 @@ struct NodeGestureView: View {
         .scaleEffect((isDragged && dragState != .zero) || localDragState != .zero ? 1.1 : 1.0)
         .gesture(
             DragGesture()
+                .onChanged { _ in
+                    if !isPathFindingMode && localDragState == .zero {
+                        onDragStart(node)
+                    }
+                }
                 .updating($localDragState) { value, state, _ in
-                    state = value.translation
-                    onDrag(node, value.translation)
+                    if !isPathFindingMode {
+                        state = value.translation
+                        onDrag(node, value.translation)
+                    }
+                }
+                .onEnded { _ in
+                    if !isPathFindingMode {
+                        onDragEnd(node)
+                    }
                 }
         )
         .onTapGesture {
@@ -191,8 +206,11 @@ struct NetworkNodesView: View {
     let dragState: CGSize
     let pathFindingStartNode: StudentNode?
     let pathFindingEndNode: StudentNode?
+    let isPathFindingMode: Bool
     let onNodeTap: (StudentNode) -> Void
+    let onNodeDragStart: (StudentNode) -> Void
     let onNodeDrag: (StudentNode, CGSize) -> Void
+    let onNodeDragEnd: (StudentNode) -> Void
     
     private func isNodeSelected(_ node: StudentNode) -> Bool {
         node.id == pathFindingStartNode?.id || node.id == pathFindingEndNode?.id
@@ -210,7 +228,10 @@ struct NetworkNodesView: View {
             dragState: dragState,
             isStartNode: node.id == pathFindingStartNode?.id,
             isEndNode: node.id == pathFindingEndNode?.id,
+            isPathFindingMode: isPathFindingMode,
+            onDragStart: onNodeDragStart,
             onDrag: onNodeDrag,
+            onDragEnd: onNodeDragEnd,
             onTap: onNodeTap
         )
         .position(node.position)
@@ -293,7 +314,11 @@ struct NetworkGraphView: View {
                     dragState: dragState,
                     pathFindingStartNode: pathFindingStartNode,
                     pathFindingEndNode: pathFindingEndNode,
+                    isPathFindingMode: networkState.isPathFindingMode,
                     onNodeTap: handleNodeTap,
+                    onNodeDragStart: { node in
+                        networkState.startNodeDrag(node)
+                    },
                     onNodeDrag: { node, translation in
                         draggedNode = node
                         if let index = networkState.nodes.firstIndex(where: { $0.id == node.id }) {
@@ -303,6 +328,9 @@ struct NetworkGraphView: View {
                             )
                             networkState.updateNodePosition(node, newPosition: newPosition)
                         }
+                    },
+                    onNodeDragEnd: { node in
+                        networkState.endNodeDrag(node)
                         draggedNode = nil
                     }
                 )

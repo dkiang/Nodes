@@ -66,6 +66,9 @@ class NetworkState: ObservableObject {
     @Published var currentPath: [StudentNode] = []
     @Published var isAnimatingPath: Bool = false
     
+    // Drag tracking
+    private var dragStartPositions: [UUID: CGPoint] = [:]
+    
     // Undo stack
     private var undoStack: [NetworkAction] = []
     var canUndo: Bool { !undoStack.isEmpty }
@@ -287,7 +290,16 @@ class NetworkState: ObservableObject {
         }
     }
     
+    func startNodeDrag(_ node: StudentNode) {
+        // Only allow dragging if not in path finding mode
+        guard !isPathFindingMode else { return }
+        dragStartPositions[node.id] = node.position
+    }
+    
     func updateNodePosition(_ node: StudentNode, newPosition: CGPoint) {
+        // Only allow position updates if not in path finding mode
+        guard !isPathFindingMode else { return }
+        
         if let index = nodes.firstIndex(where: { $0.id == node.id }) {
             let oldPosition = nodes[index].position
             
@@ -310,8 +322,30 @@ class NetworkState: ObservableObject {
         }
     }
     
+    func endNodeDrag(_ node: StudentNode) {
+        // Only process drag end if we have a start position and we're not in path finding mode
+        guard !isPathFindingMode,
+              let startPosition = dragStartPositions[node.id] else { return }
+        
+        // If the node was actually moved (not just clicked), push the undo action
+        if startPosition != node.position {
+            pushUndoAction(.updateNodePosition(node.id, oldPosition: startPosition, newPosition: node.position))
+        }
+        
+        // Clear the start position
+        dragStartPositions.removeValue(forKey: node.id)
+    }
+    
     private func pushUndoAction(_ action: NetworkAction) {
-        undoStack.append(action)
+        // If the last action was a node position update for the same node,
+        // replace it instead of adding a new one
+        if case .updateNodePosition(let id, let oldPosition, _) = action,
+           case .updateNodePosition(let lastId, _, let lastNewPosition) = undoStack.last,
+           id == lastId {
+            undoStack[undoStack.count - 1] = .updateNodePosition(id, oldPosition: oldPosition, newPosition: lastNewPosition)
+        } else {
+            undoStack.append(action)
+        }
     }
     
     func undo() {
@@ -347,6 +381,20 @@ class NetworkState: ObservableObject {
             
         case .updateNodePosition(let id, let oldPosition, _):
             if let index = nodes.firstIndex(where: { $0.id == id }) {
+                // Update CoreData
+                let fetchRequest = NSFetchRequest<NSManagedObject>(entityName: "NodeEntity")
+                fetchRequest.predicate = NSPredicate(format: "id == %@", id as CVarArg)
+                
+                do {
+                    if let entity = try viewContext.fetch(fetchRequest).first {
+                        entity.setValue(oldPosition.x, forKey: "positionX")
+                        entity.setValue(oldPosition.y, forKey: "positionY")
+                        saveContext()
+                    }
+                } catch {
+                    print("Error undoing node position: \(error)")
+                }
+                
                 nodes[index].position = oldPosition
             }
             
