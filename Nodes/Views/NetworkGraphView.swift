@@ -111,6 +111,7 @@ struct PathVisualizationView: View {
             }
             .stroke(Color.green, lineWidth: 3)
             .opacity(0.7)
+            .animation(.easeInOut(duration: 0.3), value: path)
         }
     }
 }
@@ -124,21 +125,9 @@ struct NodeView: View {
     let isEndNode: Bool
     @State private var isDragging = false
     
-    private var nodeColor: Color {
-        if isStartNode {
-            return .green
-        } else if isEndNode {
-            return .red
-        } else if isSelected {
-            return .yellow
-        } else {
-            return color
-        }
-    }
-    
     var body: some View {
         Circle()
-            .fill(node.isActive ? nodeColor : Color.gray)
+            .fill(node.isActive ? color : Color.gray)
             .frame(width: 60, height: 60)
             .overlay(
                 Text(node.name)
@@ -149,7 +138,11 @@ struct NodeView: View {
             )
             .overlay(
                 Circle()
-                    .stroke(isSelected ? Color.yellow : Color.clear, lineWidth: 3)
+                    .stroke(
+                        isStartNode || isEndNode ? Color.black : 
+                        isSelected ? Color.yellow : Color.clear,
+                        lineWidth: 3
+                    )
             )
             .shadow(radius: isDragging ? 8 : 4)
             .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isDragging)
@@ -382,13 +375,16 @@ struct NetworkGraphView: View {
             pathFindingStartNode = node
             networkState.startNode = node
         } else if pathFindingEndNode == nil && node.id != pathFindingStartNode?.id {
-            pathFindingEndNode = node
-            networkState.endNode = node
+            // Check if there's a possible path before setting the end node
             if let start = pathFindingStartNode {
                 let paths = networkState.findPaths(from: start, to: node)
-                if let shortestPath = paths.first {
-                    currentPath = shortestPath
-                    networkState.currentPath = shortestPath
+                if !paths.isEmpty {
+                    pathFindingEndNode = node
+                    networkState.endNode = node
+                    if let shortestPath = paths.first {
+                        currentPath = shortestPath
+                        networkState.currentPath = shortestPath
+                    }
                 }
             }
         } else {

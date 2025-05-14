@@ -9,18 +9,22 @@ An interactive iOS app for visualizing social connections among students in a cl
   - Drag nodes to rearrange the network layout
   - Pinch-to-zoom and pan for easy navigation
   - Visual feedback for active/inactive nodes
+  - Black border highlighting for selected nodes in path finding mode
 
 - **Connection Management**
   - Create connections between students with shared interests
   - Automatic replacement of existing connections
   - Delete connections with a single tap
   - Visual labels showing common interests
+  - Connection lines only appear after selecting both nodes
 
 - **Path Finding**
   - Find the shortest path between any two students
-  - Visual highlighting of start and end nodes
-  - Animated path visualization
+  - Black border highlighting for start and end nodes
+  - Animated path visualization with green highlight
+  - Prevents selection of unreachable nodes
   - Clear visual feedback for selected nodes
+  - Maintains node colors during path finding
 
 - **Undo Support**
   - Undo any action (node creation, connection management, etc.)
@@ -59,10 +63,11 @@ An interactive iOS app for visualizing social connections among students in a cl
 
 ### Finding Paths
 1. Tap the "Find Path" button
-2. Select the starting node
-3. Select the destination node
-4. The shortest path will be highlighted
+2. Select the starting node (highlighted with black border)
+3. Select a reachable destination node (highlighted with black border)
+4. The shortest path will be highlighted in green
 5. Tap any node to start a new path search
+6. Unreachable nodes cannot be selected as end points
 
 ### Undoing Actions
 - Use the undo button in the toolbar to revert the last action

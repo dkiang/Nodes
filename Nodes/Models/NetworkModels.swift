@@ -3,7 +3,7 @@ import CoreData
 import SwiftUI
 
 // MARK: - Student Node Model
-struct StudentNode: Identifiable, Codable {
+struct StudentNode: Identifiable, Codable, Equatable {
     let id: UUID
     var name: String
     var position: CGPoint
@@ -17,10 +17,18 @@ struct StudentNode: Identifiable, Codable {
         self.isActive = isActive
         self.connections = []
     }
+    
+    static func == (lhs: StudentNode, rhs: StudentNode) -> Bool {
+        lhs.id == rhs.id &&
+        lhs.name == rhs.name &&
+        lhs.position == rhs.position &&
+        lhs.isActive == rhs.isActive &&
+        lhs.connections == rhs.connections
+    }
 }
 
 // MARK: - Connection Model
-struct Connection: Identifiable, Codable {
+struct Connection: Identifiable, Codable, Equatable {
     let id: UUID
     let fromNodeId: UUID
     let toNodeId: UUID
@@ -31,6 +39,13 @@ struct Connection: Identifiable, Codable {
         self.fromNodeId = fromNodeId
         self.toNodeId = toNodeId
         self.commonInterest = commonInterest
+    }
+    
+    static func == (lhs: Connection, rhs: Connection) -> Bool {
+        lhs.id == rhs.id &&
+        lhs.fromNodeId == rhs.fromNodeId &&
+        lhs.toNodeId == rhs.toNodeId &&
+        lhs.commonInterest == rhs.commonInterest
     }
 }
 

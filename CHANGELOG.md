@@ -12,19 +12,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Connection deletion with visual delete button
 - Undo functionality for all actions
 - Automatic connection replacement when creating new connections
-- Enhanced node highlighting in path finding mode
-- Visual feedback for selected nodes in path finding mode
-- Toolbar with undo button
-- Improved connection labels with delete button
+- Black border highlighting for selected nodes in path finding mode
+- Path validation to prevent selection of unreachable nodes
+- Animated path visualization
+- Connection line visibility control
 - State management for path finding mode
 
 ### Changed
 - Updated connection management to replace existing connections
-- Improved node highlighting system
+- Improved node highlighting system with black borders for path finding
 - Enhanced path finding visual feedback
 - Refactored state management for better undo support
 - Updated README with new features and usage instructions
 - Improved connection label visibility and interaction
+- Modified path finding to maintain node colors
+- Updated connection line appearance logic
 
 ### Fixed
 - Connection persistence during node dragging
@@ -32,6 +34,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Connection label positioning
 - State management for undo operations
 - Visual feedback for selected nodes
+- Connection line appearance timing
+- Path finding node selection validation
+- Node color consistency during path finding
 
 ## [0.1.0] - 2024-05-13
 
