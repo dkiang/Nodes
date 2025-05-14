@@ -1,31 +1,36 @@
 # Class Network Visualization
 
-An interactive iOS app that helps students visualize their social connections in the classroom. Students can create a network of connections based on shared interests, and explore how information flows through their social network.
+An interactive iOS app for visualizing social connections among students in a class. The app allows users to create, manage, and explore relationships between students through an intuitive node-based interface.
 
 ## Features
 
 - **Interactive Node Graph**
-  - Drag and drop nodes to arrange the network
-  - Rainbow-colored nodes for easy identification
-  - Smooth animations and visual feedback
-  - Pinch to zoom for better visibility
+  - Create and manage student nodes with unique rainbow colors
+  - Drag nodes to rearrange the network layout
+  - Pinch-to-zoom and pan for easy navigation
+  - Visual feedback for active/inactive nodes
 
 - **Connection Management**
-  - Create connections between students by tapping nodes
-  - Add shared interests to connections
-  - Visualize active and inactive connections
-  - Real-time updates to the network
+  - Create connections between students with shared interests
+  - Automatic replacement of existing connections
+  - Delete connections with a single tap
+  - Visual labels showing common interests
 
 - **Path Finding**
-  - Find all possible paths between students
-  - Animate path traversal
-  - Deactivate nodes to see alternative routes
-  - Visualize how information flows through the network
+  - Find the shortest path between any two students
+  - Visual highlighting of start and end nodes
+  - Animated path visualization
+  - Clear visual feedback for selected nodes
+
+- **Undo Support**
+  - Undo any action (node creation, connection management, etc.)
+  - Maintains a history of all changes
+  - Easy access through the toolbar
 
 - **Data Persistence**
-  - Save network data between app launches
-  - Core Data integration for reliable storage
-  - Maintain node positions and connections
+  - Automatic saving of network state
+  - Restore previous sessions
+  - Maintains all connections and node positions
 
 ## Requirements
 
@@ -35,55 +40,60 @@ An interactive iOS app that helps students visualize their social connections in
 
 ## Installation
 
-1. Clone the repository:
-```bash
-git clone https://github.com/yourusername/Nodes.git
-```
-
+1. Clone the repository
 2. Open `Nodes.xcodeproj` in Xcode
-
-3. Build and run the project (⌘R)
+3. Build and run the project
 
 ## Usage
 
-1. **Adding Students**
-   - Tap the "Add Student" button
-   - Enter the student's name
-   - The student will appear as a colored node in the network
+### Creating Nodes
+- Tap the "+" button to add a new student node
+- Enter the student's name
+- The node will appear with a unique rainbow color
 
-2. **Creating Connections**
-   - Tap a student node to start creating a connection
-   - Tap another student node to complete the connection
-   - Enter the shared interest when prompted
+### Managing Connections
+- Tap a node to select it
+- Tap another node to create a connection
+- Enter the common interest
+- To delete a connection, tap the "x" button on the connection label
 
-3. **Exploring the Network**
-   - Drag nodes to rearrange the network
-   - Use pinch gestures to zoom in/out
-   - Tap the "Find Path" button to explore connections between students
-   - Tap nodes to deactivate them and see alternative paths
+### Finding Paths
+1. Tap the "Find Path" button
+2. Select the starting node
+3. Select the destination node
+4. The shortest path will be highlighted
+5. Tap any node to start a new path search
+
+### Undoing Actions
+- Use the undo button in the toolbar to revert the last action
+- Supports undoing:
+  - Node creation/deletion
+  - Connection creation/deletion
+  - Node position changes
+  - Node activation state changes
 
 ## Architecture
 
-The app is built using:
-- SwiftUI for the user interface
-- Core Data for persistence
-- MVVM architecture pattern
-- Observable state management
+The app follows the MVVM (Model-View-ViewModel) architecture pattern:
+
+- **Models**: `StudentNode`, `Connection`, and `NetworkState`
+- **Views**: SwiftUI views for the network graph and UI components
+- **ViewModels**: `NetworkState` manages the app's state and business logic
 
 ## Contributing
 
 1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+2. Create your feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a new Pull Request
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## Acknowledgments
 
-- Created for educational purposes to demonstrate network theory concepts
-- Inspired by social network analysis and graph theory
-- Built with SwiftUI and modern iOS development practices 
+- SwiftUI for the modern UI framework
+- Core Data for persistence
+- Graph algorithms for path finding 

@@ -6,6 +6,7 @@ struct ConnectionLineView: View {
     let to: StudentNode
     let commonInterest: String
     let opacity: Double
+    let onDelete: () -> Void
     
     var body: some View {
         Path { path in
@@ -15,13 +16,23 @@ struct ConnectionLineView: View {
         .stroke(Color.blue, lineWidth: 2)
         .opacity(opacity)
         .overlay(
-            Text(commonInterest)
-                .font(.caption2)
-                .foregroundColor(.secondary)
-                .position(
-                    x: (from.position.x + to.position.x) / 2,
-                    y: (from.position.y + to.position.y) / 2 - 10
-                )
+            HStack(spacing: 4) {
+                Text(commonInterest)
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                Button(action: onDelete) {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundColor(.red)
+                        .font(.caption2)
+                }
+            }
+            .padding(4)
+            .background(Color(.systemBackground).opacity(0.8))
+            .cornerRadius(8)
+            .position(
+                x: (from.position.x + to.position.x) / 2,
+                y: (from.position.y + to.position.y) / 2 - 10
+            )
         )
     }
 }
@@ -30,6 +41,7 @@ struct NetworkConnectionsView: View {
     let nodes: [StudentNode]
     let draggedNode: StudentNode?
     let dragState: CGSize
+    let onDeleteConnection: (Connection, StudentNode, StudentNode) -> Void
     
     private func getNodePosition(_ node: StudentNode, isDragged: Bool) -> CGPoint {
         if isDragged {
@@ -70,7 +82,8 @@ struct NetworkConnectionsView: View {
                 from: fromNodeWithPosition,
                 to: toNodeWithPosition,
                 commonInterest: connection.commonInterest,
-                opacity: getConnectionOpacity(from: node, to: toNode)
+                opacity: getConnectionOpacity(from: node, to: toNode),
+                onDelete: { onDeleteConnection(connection, node, toNode) }
             )
         )
     }
@@ -107,11 +120,25 @@ struct NodeView: View {
     let node: StudentNode
     let color: Color
     let isSelected: Bool
+    let isStartNode: Bool
+    let isEndNode: Bool
     @State private var isDragging = false
+    
+    private var nodeColor: Color {
+        if isStartNode {
+            return .green
+        } else if isEndNode {
+            return .red
+        } else if isSelected {
+            return .yellow
+        } else {
+            return color
+        }
+    }
     
     var body: some View {
         Circle()
-            .fill(node.isActive ? color : Color.gray)
+            .fill(node.isActive ? nodeColor : Color.gray)
             .frame(width: 60, height: 60)
             .overlay(
                 Text(node.name)
@@ -129,6 +156,41 @@ struct NodeView: View {
     }
 }
 
+struct NodeGestureView: View {
+    let node: StudentNode
+    let color: Color
+    let isDragged: Bool
+    let dragState: CGSize
+    let isStartNode: Bool
+    let isEndNode: Bool
+    let onDrag: (StudentNode, CGSize) -> Void
+    let onTap: (StudentNode) -> Void
+    @GestureState private var localDragState = CGSize.zero
+    
+    var body: some View {
+        NodeView(
+            node: node,
+            color: color,
+            isSelected: false,
+            isStartNode: isStartNode,
+            isEndNode: isEndNode
+        )
+        .offset(isDragged ? dragState : localDragState)
+        .scaleEffect((isDragged && dragState != .zero) || localDragState != .zero ? 1.1 : 1.0)
+        .gesture(
+            DragGesture()
+                .updating($localDragState) { value, state, _ in
+                    state = value.translation
+                    onDrag(node, value.translation)
+                }
+        )
+        .onTapGesture {
+            onTap(node)
+        }
+        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: localDragState)
+    }
+}
+
 struct NetworkNodesView: View {
     let nodes: [StudentNode]
     let nodeColor: (StudentNode) -> Color
@@ -143,30 +205,27 @@ struct NetworkNodesView: View {
         node.id == pathFindingStartNode?.id || node.id == pathFindingEndNode?.id
     }
     
-    private func getNodeScale(_ node: StudentNode) -> CGFloat {
-        draggedNode?.id == node.id && dragState != .zero ? 1.1 : 1.0
+    private func isNodeDragged(_ node: StudentNode) -> Bool {
+        draggedNode?.id == node.id
+    }
+    
+    private func nodeView(for node: StudentNode) -> some View {
+        NodeGestureView(
+            node: node,
+            color: nodeColor(node),
+            isDragged: isNodeDragged(node),
+            dragState: dragState,
+            isStartNode: node.id == pathFindingStartNode?.id,
+            isEndNode: node.id == pathFindingEndNode?.id,
+            onDrag: onNodeDrag,
+            onTap: onNodeTap
+        )
+        .position(node.position)
     }
     
     var body: some View {
         ForEach(nodes) { node in
-            NodeView(
-                node: node,
-                color: nodeColor(node),
-                isSelected: isNodeSelected(node)
-            )
-            .position(node.position)
-            .offset(draggedNode?.id == node.id ? dragState : .zero)
-            .scaleEffect(getNodeScale(node))
-            .gesture(
-                DragGesture()
-                    .updating(.init(get: { dragState }, set: { _ in })) { value, state, _ in
-                        onNodeDrag(node, value.translation)
-                    }
-            )
-            .onTapGesture {
-                onNodeTap(node)
-            }
-            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: dragState)
+            nodeView(for: node)
         }
     }
 }
@@ -193,7 +252,10 @@ struct NetworkGraphView: View {
     }
     
     private var isDrawingTemporaryConnection: Bool {
-        !networkState.isPathFindingMode && networkState.isDrawingConnection
+        !networkState.isPathFindingMode && 
+        networkState.isDrawingConnection && 
+        networkState.connectionStartNode != nil && 
+        tempConnectionEnd != nil
     }
     
     var body: some View {
@@ -207,7 +269,10 @@ struct NetworkGraphView: View {
                 NetworkConnectionsView(
                     nodes: networkState.nodes,
                     draggedNode: draggedNode,
-                    dragState: dragState
+                    dragState: dragState,
+                    onDeleteConnection: { connection, from, to in
+                        networkState.removeConnection(connection, from: from, to: to)
+                    }
                 )
                 
                 // Path visualization
@@ -215,7 +280,7 @@ struct NetworkGraphView: View {
                     PathVisualizationView(path: currentPath)
                 }
                 
-                // Temporary connection line
+                // Temporary connection line - only show when we have both start and end points
                 if isDrawingTemporaryConnection,
                    let startNode = networkState.connectionStartNode,
                    let endPoint = tempConnectionEnd {
@@ -243,11 +308,19 @@ struct NetworkGraphView: View {
                                 x: min(max(node.position.x + translation.width, 30), geometry.size.width - 30),
                                 y: min(max(node.position.y + translation.height, 30), geometry.size.height - 30)
                             )
-                            networkState.nodes[index].position = newPosition
+                            networkState.updateNodePosition(node, newPosition: newPosition)
                         }
                         draggedNode = nil
                     }
                 )
+            }
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: { networkState.undo() }) {
+                        Image(systemName: "arrow.uturn.backward")
+                    }
+                    .disabled(!networkState.canUndo)
+                }
             }
             .gesture(
                 MagnificationGesture()
@@ -307,18 +380,25 @@ struct NetworkGraphView: View {
     private func handlePathFindingTap(_ node: StudentNode) {
         if pathFindingStartNode == nil {
             pathFindingStartNode = node
+            networkState.startNode = node
         } else if pathFindingEndNode == nil && node.id != pathFindingStartNode?.id {
             pathFindingEndNode = node
+            networkState.endNode = node
             if let start = pathFindingStartNode {
                 let paths = networkState.findPaths(from: start, to: node)
                 if let shortestPath = paths.first {
                     currentPath = shortestPath
+                    networkState.currentPath = shortestPath
                 }
             }
         } else {
+            // Reset path finding state
             pathFindingStartNode = node
             pathFindingEndNode = nil
             currentPath = []
+            networkState.startNode = node
+            networkState.endNode = nil
+            networkState.currentPath = []
         }
     }
     
@@ -331,6 +411,7 @@ struct NetworkGraphView: View {
         } else {
             networkState.isDrawingConnection = true
             networkState.connectionStartNode = node
+            tempConnectionEnd = nil // Reset the end point when starting a new connection
         }
     }
 } 

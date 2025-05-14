@@ -8,55 +8,68 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Initial project setup with SwiftUI and Core Data
-- Basic node graph visualization
-- Student node creation and management
-- Connection creation between students
-- Path finding between nodes
-- Node deactivation functionality
-- Data persistence using Core Data
-- Rainbow-colored nodes for better visibility
-- Interactive node dragging with visual feedback
-- Pinch-to-zoom gesture support
+- Rainbow-colored nodes for better visual distinction
+- Connection deletion with visual delete button
+- Undo functionality for all actions
+- Automatic connection replacement when creating new connections
+- Enhanced node highlighting in path finding mode
+- Visual feedback for selected nodes in path finding mode
+- Toolbar with undo button
+- Improved connection labels with delete button
+- State management for path finding mode
 
 ### Changed
-- Improved node dragging to only move selected node
-- Enhanced visual feedback during node interaction
-- Updated node layout and connection visualization
-- Replaced alerts with sheets for better input handling
+- Updated connection management to replace existing connections
+- Improved node highlighting system
+- Enhanced path finding visual feedback
+- Refactored state management for better undo support
+- Updated README with new features and usage instructions
+- Improved connection label visibility and interaction
 
 ### Fixed
-- Layout constraint issues with keyboard input
-- Node dragging affecting all nodes instead of selected node
-- Connection creation UI/UX improvements
+- Connection persistence during node dragging
+- Path finding mode node selection
+- Connection label positioning
+- State management for undo operations
+- Visual feedback for selected nodes
 
 ## [0.1.0] - 2024-05-13
 
 ### Added
 - Initial project creation
-- Basic SwiftUI project structure
+- Basic SwiftUI structure
 - Core Data model setup
-- Basic node and connection models
-- Network state management
-- Basic UI components
+- Student node management
+- Connection creation between nodes
+- Path finding algorithm
+- Node deactivation
+- Data persistence
+- Rainbow-colored nodes
+- Interactive dragging
+- Pinch-to-zoom support
 
 ### Changed
-- N/A
+- Improved node dragging behavior
+- Enhanced visual feedback
+- Optimized layout system
+- Updated input handling
 
 ### Fixed
-- N/A
+- Layout constraints
+- Dragging behavior
+- UI/UX improvements
 
 ## Versioning
 
-We use [SemVer](http://semver.org/) for versioning. For the versions available, see the [tags on this repository](https://github.com/yourusername/Nodes/tags).
+We use [Semantic Versioning](http://semver.org/) for versioning. For the versions available, see the [tags on this repository](https://github.com/yourusername/Nodes/tags).
 
 ## Release Notes
 
 ### Version 0.1.0
-- Initial release with basic functionality
-- Core features implemented:
-  - Node creation and management
-  - Connection creation
-  - Basic path finding
-  - Data persistence
-  - Interactive node manipulation 
+Initial release with core functionality:
+- Node creation and management
+- Connection creation and visualization
+- Path finding between nodes
+- Basic data persistence
+- Interactive node manipulation
+- Visual feedback system 
