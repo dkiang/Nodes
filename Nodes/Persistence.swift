@@ -14,15 +14,21 @@ struct PersistenceController {
     static let preview: PersistenceController = {
         let result = PersistenceController(inMemory: true)
         let viewContext = result.container.viewContext
-        for _ in 0..<10 {
-            let newItem = Item(context: viewContext)
-            newItem.timestamp = Date()
+        
+        // Create some sample student nodes
+        let names = ["Alice", "Bob", "Charlie", "Diana", "Eve"]
+        for (index, name) in names.enumerated() {
+            let node = StudentNodeEntity(context: viewContext)
+            node.id = UUID()
+            node.name = name
+            node.positionX = Double(100 + index * 50)
+            node.positionY = Double(100 + index * 50)
+            node.isActive = true
         }
+        
         do {
             try viewContext.save()
         } catch {
-            // Replace this implementation with code to handle the error appropriately.
-            // fatalError() causes the application to generate a crash log and terminate. You should not use this function in a shipping application, although it may be useful during development.
             let nsError = error as NSError
             fatalError("Unresolved error \(nsError), \(nsError.userInfo)")
         }
@@ -33,25 +39,108 @@ struct PersistenceController {
 
     init(inMemory: Bool = false) {
         container = NSPersistentContainer(name: "Nodes")
+        
         if inMemory {
             container.persistentStoreDescriptions.first!.url = URL(fileURLWithPath: "/dev/null")
         }
-        container.loadPersistentStores(completionHandler: { (storeDescription, error) in
-            if let error = error as NSError? {
-                // Replace this implementation with code to handle the error appropriately.
-                // fatalError() causes the application to generate a crash log and terminate. You should not use this function in a shipping application, although it may be useful during development.
-
-                /*
-                 Typical reasons for an error here include:
-                 * The parent directory does not exist, cannot be created, or disallows writing.
-                 * The persistent store is not accessible, due to permissions or data protection when the device is locked.
-                 * The device is out of space.
-                 * The store could not be migrated to the current model version.
-                 Check the error message to determine what the actual problem was.
-                 */
-                fatalError("Unresolved error \(error), \(error.userInfo)")
+        
+        container.loadPersistentStores { description, error in
+            if let error = error {
+                fatalError("Error: \(error.localizedDescription)")
             }
-        })
+        }
+        
         container.viewContext.automaticallyMergesChangesFromParent = true
+        container.viewContext.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy
+    }
+    
+    // MARK: - Student Node Operations
+    
+    func saveStudentNode(_ node: StudentNode, context: NSManagedObjectContext) {
+        let entity = StudentNodeEntity(context: context)
+        entity.id = node.id
+        entity.name = node.name
+        entity.positionX = node.position.x
+        entity.positionY = node.position.y
+        entity.isActive = node.isActive
+        
+        do {
+            try context.save()
+        } catch {
+            print("Error saving student node: \(error)")
+        }
+    }
+    
+    func saveConnection(from: StudentNode, to: StudentNode, commonInterest: String, context: NSManagedObjectContext) {
+        guard let fromEntity = fetchStudentNodeEntity(with: from.id, context: context),
+              let toEntity = fetchStudentNodeEntity(with: to.id, context: context) else {
+            return
+        }
+        
+        let connection = ConnectionEntity(context: context)
+        connection.id = UUID()
+        connection.commonInterest = commonInterest
+        connection.fromNode = fromEntity
+        connection.toNode = toEntity
+        
+        do {
+            try context.save()
+        } catch {
+            print("Error saving connection: \(error)")
+        }
+    }
+    
+    func fetchStudentNodeEntity(with id: UUID, context: NSManagedObjectContext) -> StudentNodeEntity? {
+        let request: NSFetchRequest<StudentNodeEntity> = StudentNodeEntity.fetchRequest()
+        request.predicate = NSPredicate(format: "id == %@", id as CVarArg)
+        request.fetchLimit = 1
+        
+        do {
+            let results = try context.fetch(request)
+            return results.first
+        } catch {
+            print("Error fetching student node: \(error)")
+            return nil
+        }
+    }
+    
+    func loadAllStudentNodes(context: NSManagedObjectContext) -> [StudentNode] {
+        let request: NSFetchRequest<StudentNodeEntity> = StudentNodeEntity.fetchRequest()
+        
+        do {
+            let entities = try context.fetch(request)
+            return entities.map { entity in
+                StudentNode(
+                    id: entity.id ?? UUID(),
+                    name: entity.name ?? "",
+                    position: CGPoint(x: entity.positionX, y: entity.positionY),
+                    isActive: entity.isActive
+                )
+            }
+        } catch {
+            print("Error loading student nodes: \(error)")
+            return []
+        }
+    }
+    
+    func loadConnections(for node: StudentNode, context: NSManagedObjectContext) -> [Connection] {
+        guard let entity = fetchStudentNodeEntity(with: node.id, context: context) else {
+            return []
+        }
+        
+        return (entity.connections?.allObjects as? [ConnectionEntity])?.compactMap { connectionEntity in
+            guard let toNode = connectionEntity.toNode,
+                  let toNodeId = toNode.id,
+                  let commonInterest = connectionEntity.commonInterest else {
+                return nil
+            }
+            
+            return Connection(
+                id: connectionEntity.id ?? UUID(),
+                fromNodeId: node.id,
+                toNodeId: toNodeId,
+                commonInterest: commonInterest
+            )
+        } ?? []
     }
 }

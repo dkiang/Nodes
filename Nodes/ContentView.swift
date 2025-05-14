@@ -10,76 +10,74 @@ import CoreData
 
 struct ContentView: View {
     @Environment(\.managedObjectContext) private var viewContext
-
-    @FetchRequest(
-        sortDescriptors: [NSSortDescriptor(keyPath: \Item.timestamp, ascending: true)],
-        animation: .default)
-    private var items: FetchedResults<Item>
+    @StateObject private var networkState = NetworkState()
+    @State private var showingAddStudent = false
+    @State private var newStudentName = ""
+    @State private var isPathFindingMode = false
+    @State private var showingPathAlert = false
 
     var body: some View {
         NavigationView {
-            List {
-                ForEach(items) { item in
-                    NavigationLink {
-                        Text("Item at \(item.timestamp!, formatter: itemFormatter)")
-                    } label: {
-                        Text(item.timestamp!, formatter: itemFormatter)
+            VStack(spacing: 0) {
+                NetworkGraphView()
+                    .environmentObject(networkState)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                
+                // Control Panel
+                VStack(spacing: 12) {
+                    HStack {
+                        Button(action: { showingAddStudent = true }) {
+                            Label("Add Student", systemImage: "person.badge.plus")
+                        }
+                        .buttonStyle(.bordered)
+                        
+                        Button(action: { isPathFindingMode.toggle() }) {
+                            Label(isPathFindingMode ? "Cancel Path" : "Find Path", systemImage: "arrow.triangle.branch")
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(isPathFindingMode ? .red : .blue)
+                    }
+                    
+                    if isPathFindingMode {
+                        Text("Select start and end nodes to find paths")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
                     }
                 }
-                .onDelete(perform: deleteItems)
+                .padding()
+                .background(Color(.systemBackground))
             }
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    EditButton()
-                }
-                ToolbarItem {
-                    Button(action: addItem) {
-                        Label("Add Item", systemImage: "plus")
+            .navigationTitle("Class Network")
+            .sheet(isPresented: $showingAddStudent) {
+                NavigationView {
+                    Form {
+                        Section(header: Text("New Student")) {
+                            TextField("Student Name", text: $newStudentName)
+                        }
                     }
+                    .navigationTitle("Add Student")
+                    .navigationBarItems(
+                        leading: Button("Cancel") {
+                            showingAddStudent = false
+                            newStudentName = ""
+                        },
+                        trailing: Button("Add") {
+                            if !newStudentName.isEmpty {
+                                // Add node at a random position within the view
+                                let randomX = CGFloat.random(in: 100...300)
+                                let randomY = CGFloat.random(in: 100...300)
+                                networkState.addNode(name: newStudentName, at: CGPoint(x: randomX, y: randomY))
+                                newStudentName = ""
+                                showingAddStudent = false
+                            }
+                        }
+                        .disabled(newStudentName.isEmpty)
+                    )
                 }
-            }
-            Text("Select an item")
-        }
-    }
-
-    private func addItem() {
-        withAnimation {
-            let newItem = Item(context: viewContext)
-            newItem.timestamp = Date()
-
-            do {
-                try viewContext.save()
-            } catch {
-                // Replace this implementation with code to handle the error appropriately.
-                // fatalError() causes the application to generate a crash log and terminate. You should not use this function in a shipping application, although it may be useful during development.
-                let nsError = error as NSError
-                fatalError("Unresolved error \(nsError), \(nsError.userInfo)")
-            }
-        }
-    }
-
-    private func deleteItems(offsets: IndexSet) {
-        withAnimation {
-            offsets.map { items[$0] }.forEach(viewContext.delete)
-
-            do {
-                try viewContext.save()
-            } catch {
-                // Replace this implementation with code to handle the error appropriately.
-                // fatalError() causes the application to generate a crash log and terminate. You should not use this function in a shipping application, although it may be useful during development.
-                let nsError = error as NSError
-                fatalError("Unresolved error \(nsError), \(nsError.userInfo)")
             }
         }
     }
 }
-
-private let itemFormatter: DateFormatter = {
-    let formatter = DateFormatter()
-    formatter.dateStyle = .short
-    formatter.timeStyle = .medium
-    return formatter
-}()
 
 #Preview {
     ContentView().environment(\.managedObjectContext, PersistenceController.preview.container.viewContext)
