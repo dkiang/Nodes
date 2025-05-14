@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="22522" systemVersion="24.4.0" minimumToolsVersion="Automatic" sourceLanguage="Swift" usedWithSwiftData="YES" userDefinedModelVersionIdentifier="">
-    <entity name="StudentNodeEntity" representedClassName="StudentNodeEntity" syncable="YES" codeGenerationType="class">
+<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="22522" systemVersion="24.4.0" minimumToolsVersion="Automatic" sourceLanguage="Swift" userDefinedModelVersionIdentifier="">
+    <entity name="NodeEntity" representedClassName=".NodeEntity" syncable="YES" codeGenerationType="class">
         <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
         <attribute name="isActive" optional="NO" attributeType="Boolean" defaultValueString="YES" usesScalarValueType="YES"/>
         <attribute name="name" optional="NO" attributeType="String"/>
@@ -8,10 +8,10 @@
         <attribute name="positionY" optional="NO" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
         <relationship name="connections" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="ConnectionEntity" inverseName="fromNode" inverseEntity="ConnectionEntity"/>
     </entity>
-    <entity name="ConnectionEntity" representedClassName="ConnectionEntity" syncable="YES" codeGenerationType="class">
+    <entity name="ConnectionEntity" representedClassName=".ConnectionEntity" syncable="YES" codeGenerationType="class">
         <attribute name="commonInterest" optional="NO" attributeType="String"/>
         <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
-        <relationship name="fromNode" optional="NO" maxCount="1" deletionRule="Nullify" destinationEntity="StudentNodeEntity" inverseName="connections" inverseEntity="StudentNodeEntity"/>
-        <relationship name="toNode" optional="NO" maxCount="1" deletionRule="Nullify" destinationEntity="StudentNodeEntity"/>
+        <attribute name="toNodeId" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <relationship name="fromNode" optional="NO" maxCount="1" deletionRule="Nullify" destinationEntity="NodeEntity" inverseName="connections" inverseEntity="NodeEntity"/>
     </entity>
 </model>

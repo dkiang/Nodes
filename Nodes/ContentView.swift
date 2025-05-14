@@ -10,10 +10,15 @@ import CoreData
 
 struct ContentView: View {
     @Environment(\.managedObjectContext) private var viewContext
-    @StateObject private var networkState = NetworkState()
+    @StateObject private var networkState: NetworkState
     @State private var showingAddStudent = false
     @State private var newStudentName = ""
     @State private var showingPathAlert = false
+
+    init() {
+        let context = PersistenceController.shared.container.viewContext
+        _networkState = StateObject(wrappedValue: NetworkState(context: context))
+    }
 
     var body: some View {
         NavigationView {
@@ -73,6 +78,42 @@ struct ContentView: View {
                         .disabled(newStudentName.isEmpty)
                     )
                 }
+            }
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Menu {
+                        Button(action: {
+                            networkState.showClearDataAlert = true
+                        }) {
+                            Label("Clear All Data", systemImage: "trash")
+                        }
+                        
+                        if networkState.canUndo {
+                            Button(action: {
+                                networkState.undo()
+                            }) {
+                                Label("Undo", systemImage: "arrow.uturn.backward")
+                            }
+                        }
+                        
+                        Button(action: {
+                            networkState.isPathFindingMode.toggle()
+                        }) {
+                            Label(networkState.isPathFindingMode ? "Exit Find Path" : "Find Path", 
+                                  systemImage: networkState.isPathFindingMode ? "xmark.circle" : "arrow.triangle.branch")
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                    }
+                }
+            }
+            .alert("Clear All Data", isPresented: $networkState.showClearDataAlert) {
+                Button("Cancel", role: .cancel) { }
+                Button("Clear", role: .destructive) {
+                    networkState.clearAllData()
+                }
+            } message: {
+                Text("Are you sure you want to clear all nodes and connections? This action cannot be undone.")
             }
         }
     }

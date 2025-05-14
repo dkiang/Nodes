@@ -1,100 +1,104 @@
-# Class Network Visualization
+# Nodes
 
-An interactive iOS app for visualizing social connections among students in a class. The app allows users to create, manage, and explore relationships between students through an intuitive node-based interface.
+A SwiftUI app for visualizing and managing student connections in a classroom network.
 
 ## Features
 
-- **Interactive Node Graph**
-  - Create and manage student nodes with unique rainbow colors
-  - Drag nodes to rearrange the network layout
-  - Pinch-to-zoom and pan for easy navigation
-  - Visual feedback for active/inactive nodes
-  - Black border highlighting for selected nodes in path finding mode
+### Network Visualization
+- Interactive node-based visualization of student connections
+- Drag-and-drop interface for positioning nodes
+- Real-time connection visualization
+- Rainbow-colored nodes for easy identification
+- Black border highlighting for selected nodes in path finding mode
 
-- **Connection Management**
-  - Create connections between students with shared interests
-  - Automatic replacement of existing connections
-  - Delete connections with a single tap
-  - Visual labels showing common interests
-  - Connection lines only appear after selecting both nodes
+### Connection Management
+- Create connections between students
+- Specify common interests for connections
+- Visual delete button for removing connections
+- Automatic connection replacement
+- Undo functionality for all operations
+- Connection line visibility control
 
-- **Path Finding**
-  - Find the shortest path between any two students
-  - Black border highlighting for start and end nodes
-  - Animated path visualization with green highlight
-  - Prevents selection of unreachable nodes
-  - Clear visual feedback for selected nodes
-  - Maintains node colors during path finding
+### Path Finding
+- Find paths between students
+- Visual feedback for path finding mode
+- Validation of node selection
+- Animated path visualization
+- Black border highlighting for selected nodes
+- Prevention of invalid path selections
 
-- **Undo Support**
-  - Undo any action (node creation, connection management, etc.)
-  - Maintains a history of all changes
-  - Easy access through the toolbar
+### Data Management
+- Persistent storage using CoreData
+  - All data automatically saves between sessions
+  - Efficient storage of nodes and connections
+  - Automatic relationship management
+- Data management tools
+  - Clear all data option with confirmation
+  - Undo functionality with persistent state
+  - Menu-based toolbar for easy access
+- Batch operations for efficient data handling
 
-- **Data Persistence**
-  - Automatic saving of network state
-  - Restore previous sessions
-  - Maintains all connections and node positions
+## Usage
+
+### Adding Students
+1. Tap the "Add Student" button
+2. Enter the student's name
+3. The node will appear at a random position
+4. Drag to reposition as needed
+
+### Creating Connections
+1. Tap and hold a node to start drawing a connection
+2. Drag to another node
+3. Enter the common interest
+4. The connection will be created with a visual line
+
+### Finding Paths
+1. Enter path finding mode using the "Find Path" button
+2. Select a start node (will be highlighted with a black border)
+3. Select an end node (will be highlighted with a black border)
+4. Available paths will be shown with animated lines
+5. Exit path finding mode to return to normal operation
+
+### Managing Data
+- Use the menu (ellipsis) in the toolbar to access:
+  - Clear All Data (with confirmation)
+  - Undo (when available)
+  - Find Path mode toggle
+- All changes are automatically saved
+- Data persists between app sessions
+
+## Technical Details
+
+### Data Model
+- Uses CoreData for persistent storage
+- Efficient relationship management
+- Automatic cascade deletion
+- Batch operations support
+
+### State Management
+- Centralized state management with NetworkState
+- Persistent undo stack
+- Automatic data synchronization
+- Efficient batch operations
+
+### UI Components
+- Custom node and connection views
+- Interactive gesture handling
+- Smooth animations
+- Responsive layout
+- Accessible controls
 
 ## Requirements
-
 - iOS 15.0+
 - Xcode 13.0+
 - Swift 5.5+
 
 ## Installation
-
 1. Clone the repository
-2. Open `Nodes.xcodeproj` in Xcode
-3. Build and run the project
-
-## Usage
-
-### Creating Nodes
-- Tap the "+" button to add a new student node
-- Enter the student's name
-- The node will appear with a unique rainbow color
-
-### Managing Connections
-- Tap a node to select it
-- Tap another node to create a connection
-- Enter the common interest
-- To delete a connection, tap the "x" button on the connection label
-
-### Finding Paths
-1. Tap the "Find Path" button
-2. Select the starting node (highlighted with black border)
-3. Select a reachable destination node (highlighted with black border)
-4. The shortest path will be highlighted in green
-5. Tap any node to start a new path search
-6. Unreachable nodes cannot be selected as end points
-
-### Undoing Actions
-- Use the undo button in the toolbar to revert the last action
-- Supports undoing:
-  - Node creation/deletion
-  - Connection creation/deletion
-  - Node position changes
-  - Node activation state changes
-
-## Architecture
-
-The app follows the MVVM (Model-View-ViewModel) architecture pattern:
-
-- **Models**: `StudentNode`, `Connection`, and `NetworkState`
-- **Views**: SwiftUI views for the network graph and UI components
-- **ViewModels**: `NetworkState` manages the app's state and business logic
-
-## Contributing
-
-1. Fork the repository
-2. Create your feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a new Pull Request
+2. Open the project in Xcode
+3. Build and run on your device or simulator
 
 ## License
-
 This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## Acknowledgments

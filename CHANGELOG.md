@@ -17,6 +17,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Animated path visualization
 - Connection line visibility control
 - State management for path finding mode
+- Data persistence using CoreData
+  - Automatic saving of nodes and connections
+  - Data persists between app sessions
+  - Efficient batch operations for data management
+- Data management features
+  - Clear all data option with confirmation dialog
+  - Improved undo functionality with persistent state
+  - Menu-based toolbar for data management actions
+- CoreData model for nodes and connections
+  - Efficient storage of node properties
+  - Relationship management for connections
+  - Automatic cascade deletion of related data
 
 ### Changed
 - Updated connection management to replace existing connections
@@ -27,6 +39,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improved connection label visibility and interaction
 - Modified path finding to maintain node colors
 - Updated connection line appearance logic
+- Updated node and connection models to work with CoreData
+- Improved data management UI with a more organized menu
+- Enhanced toolbar with additional data management options
 
 ### Fixed
 - Connection persistence during node dragging
@@ -37,6 +52,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Connection line appearance timing
 - Path finding node selection validation
 - Node color consistency during path finding
+- Data persistence between app launches
+- Proper cleanup of related data when deleting nodes
+- Consistent state management across app sessions
 
 ## [0.1.0] - 2024-05-13
 
