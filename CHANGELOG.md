@@ -29,6 +29,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Efficient storage of node properties
   - Relationship management for connections
   - Automatic cascade deletion of related data
+- Automatic text field focus when adding new students
+- Improved force touch sensitivity for node interaction
+- Enhanced haptic feedback system
+- Dedicated AddStudentView component for better state management
+- Immediate keyboard appearance when adding new students
 
 ### Changed
 - Updated connection management to replace existing connections
@@ -42,6 +47,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated node and connection models to work with CoreData
 - Improved data management UI with a more organized menu
 - Enhanced toolbar with additional data management options
+- Removed navigation title for cleaner interface
+- Improved node dragging behavior and smoothness
+- Enhanced gesture handling for better touch response
+- Optimized Add Student sheet presentation and performance
+- Improved keyboard handling and focus management
 
 ### Fixed
 - Connection persistence during node dragging
@@ -55,6 +65,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Data persistence between app launches
 - Proper cleanup of related data when deleting nodes
 - Consistent state management across app sessions
+- Node spinning and disappearing issues during drag
+- Force touch detection and response
+- Scope issues with isDragging variable
+- CGPoint distance method implementation
+- HapticManager integration
+- NetworkState scope management
+- Keyboard focus and appearance in Add Student sheet
+- Sheet presentation performance and responsiveness
 
 ## [0.1.0] - 2024-05-13
 

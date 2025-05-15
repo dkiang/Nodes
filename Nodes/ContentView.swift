@@ -7,6 +7,27 @@
 
 import SwiftUI
 import CoreData
+import UIKit
+
+// Add this at the top of the file, before ContentView
+struct KeyboardFocusModifier: ViewModifier {
+    @FocusState.Binding var isFocused: Bool
+    
+    func body(content: Content) -> some View {
+        content
+            .onAppear {
+                DispatchQueue.main.async {
+                    isFocused = true
+                }
+            }
+    }
+}
+
+extension View {
+    func forceKeyboardFocus(isFocused: FocusState<Bool>.Binding) -> some View {
+        self.modifier(KeyboardFocusModifier(isFocused: isFocused))
+    }
+}
 
 struct ContentView: View {
     @Environment(\.managedObjectContext) private var viewContext
@@ -14,6 +35,7 @@ struct ContentView: View {
     @State private var showingAddStudent = false
     @State private var newStudentName = ""
     @State private var showingPathAlert = false
+    @FocusState private var isStudentNameFocused: Bool
 
     init() {
         let context = PersistenceController.shared.container.viewContext
@@ -30,7 +52,10 @@ struct ContentView: View {
                 // Control Panel
                 VStack(spacing: 12) {
                     HStack {
-                        Button(action: { showingAddStudent = true }) {
+                        Button(action: {
+                            newStudentName = "" // Reset the name
+                            showingAddStudent = true
+                        }) {
                             Label("Add Student", systemImage: "person.badge.plus")
                         }
                         .buttonStyle(.bordered)
@@ -51,33 +76,17 @@ struct ContentView: View {
                 .padding()
                 .background(Color(.systemBackground))
             }
-            .navigationTitle("Class Network")
+            .navigationTitle("")
             .sheet(isPresented: $showingAddStudent) {
-                NavigationView {
-                    Form {
-                        Section(header: Text("New Student")) {
-                            TextField("Student Name", text: $newStudentName)
-                        }
+                AddStudentView(
+                    isPresented: $showingAddStudent,
+                    newStudentName: $newStudentName,
+                    onAdd: { name in
+                        let randomX = CGFloat.random(in: 100...300)
+                        let randomY = CGFloat.random(in: 100...300)
+                        networkState.addNode(name: name, at: CGPoint(x: randomX, y: randomY))
                     }
-                    .navigationTitle("Add Student")
-                    .navigationBarItems(
-                        leading: Button("Cancel") {
-                            showingAddStudent = false
-                            newStudentName = ""
-                        },
-                        trailing: Button("Add") {
-                            if !newStudentName.isEmpty {
-                                // Add node at a random position within the view
-                                let randomX = CGFloat.random(in: 100...300)
-                                let randomY = CGFloat.random(in: 100...300)
-                                networkState.addNode(name: newStudentName, at: CGPoint(x: randomX, y: randomY))
-                                newStudentName = ""
-                                showingAddStudent = false
-                            }
-                        }
-                        .disabled(newStudentName.isEmpty)
-                    )
-                }
+                )
             }
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -116,6 +125,49 @@ struct ContentView: View {
                 Text("Are you sure you want to clear all nodes and connections? This action cannot be undone.")
             }
         }
+    }
+}
+
+struct AddStudentView: View {
+    @Binding var isPresented: Bool
+    @Binding var newStudentName: String
+    @FocusState private var isFocused: Bool
+    let onAdd: (String) -> Void
+    
+    var body: some View {
+        NavigationView {
+            Form {
+                Section(header: Text("New Student")) {
+                    TextField("Student Name", text: $newStudentName)
+                        .focused($isFocused)
+                        .submitLabel(.done)
+                        .textInputAutocapitalization(.words)
+                        .autocorrectionDisabled()
+                }
+            }
+            .navigationTitle("Add Student")
+            .navigationBarItems(
+                leading: Button("Cancel") {
+                    isPresented = false
+                    newStudentName = ""
+                },
+                trailing: Button("Add") {
+                    if !newStudentName.isEmpty {
+                        onAdd(newStudentName)
+                        newStudentName = ""
+                        isPresented = false
+                    }
+                }
+                .disabled(newStudentName.isEmpty)
+            )
+            .onAppear {
+                // Set focus after a very short delay to ensure the view is ready
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    isFocused = true
+                }
+            }
+        }
+        .interactiveDismissDisabled()
     }
 }
 

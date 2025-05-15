@@ -6,10 +6,12 @@ A SwiftUI app for visualizing and managing student connections in a classroom ne
 
 ### Network Visualization
 - Interactive node-based visualization of student connections
-- Drag-and-drop interface for positioning nodes
+- Drag-and-drop interface for positioning nodes with improved smoothness
 - Real-time connection visualization
 - Rainbow-colored nodes for easy identification
 - Black border highlighting for selected nodes in path finding mode
+- Enhanced force touch sensitivity for better interaction
+- Improved haptic feedback for better user experience
 
 ### Connection Management
 - Create connections between students
@@ -18,6 +20,7 @@ A SwiftUI app for visualizing and managing student connections in a classroom ne
 - Automatic connection replacement
 - Undo functionality for all operations
 - Connection line visibility control
+- Improved gesture handling for better touch response
 
 ### Path Finding
 - Find paths between students
@@ -26,6 +29,7 @@ A SwiftUI app for visualizing and managing student connections in a classroom ne
 - Animated path visualization
 - Black border highlighting for selected nodes
 - Prevention of invalid path selections
+- Improved node selection and path display
 
 ### Data Management
 - Persistent storage using CoreData
@@ -38,13 +42,27 @@ A SwiftUI app for visualizing and managing student connections in a classroom ne
   - Menu-based toolbar for easy access
 - Batch operations for efficient data handling
 
+### User Interface
+- Clean, minimal interface without navigation title
+- Optimized Add Student experience
+  - Immediate keyboard appearance
+  - Automatic text field focus
+  - Smooth sheet presentation
+  - Responsive input handling
+- Improved touch response and gesture handling
+- Enhanced visual feedback for all interactions
+- Smooth animations and transitions
+- Intuitive controls and menu system
+
 ## Usage
 
 ### Adding Students
 1. Tap the "Add Student" button
-2. Enter the student's name
-3. The node will appear at a random position
-4. Drag to reposition as needed
+2. The keyboard appears immediately with the text field focused
+3. Start typing the student's name
+4. Tap "Add" to create the node
+5. The node will appear at a random position
+6. Drag to reposition as needed
 
 ### Creating Connections
 1. Tap and hold a node to start drawing a connection
