@@ -20,10 +20,17 @@ A SwiftUI application for creating and visualizing networks of nodes and their c
 ### Path Finding
 - Toggle path finding mode to find connections between nodes
 - Automatically finds the shortest path between selected nodes
-- Visualizes the path with a highlighted connection
+- Visualizes the path with a thick green highlighted connection
 - Disables node dragging while in path finding mode
-- Any node can be selected as a start point
+- Intuitive node selection behavior:
+  - First tap on any node sets it as the start node
+  - Tapping the start node again resets both start and end nodes
+  - Tapping the end node again only deselects the end node
+  - Tapping a new node when only start is selected tries to set it as end node
+  - Tapping a new node when both are selected makes it the new start node
 - End nodes are only selectable if a valid path exists
+- Clear visual feedback with black borders for selected nodes
+- Thick green path visualization for better visibility
 
 ### Data Management
 - Automatic saving of all changes
@@ -47,12 +54,14 @@ A SwiftUI application for creating and visualizing networks of nodes and their c
 4. Connections are automatically bidirectional
 
 ### Path Finding
-1. Toggle path finding mode using the menu
-2. Tap a node to set it as the start point
-3. Tap another node to find the shortest path
-4. The path will be highlighted in green
-5. Tap the start node again to reset
-6. Tap any other node to start a new path
+1. Toggle path finding mode using the "Find Path" button
+2. Select a start node (will be highlighted with a black border)
+3. Select an end node (will be highlighted with a black border)
+   - If you tap the start node again, both selections will be cleared
+   - If you tap the end node again, only the end node will be deselected
+   - If you tap a new node when both are selected, it becomes the new start node
+4. Available paths will be shown with thick green animated lines
+5. Exit path finding mode to return to normal operation
 
 ### Data Management
 - Use the menu to access additional options

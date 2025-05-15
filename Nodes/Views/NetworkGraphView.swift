@@ -109,7 +109,7 @@ struct PathVisualizationView: View {
                 path.move(to: from.position)
                 path.addLine(to: to.position)
             }
-            .stroke(Color.green, lineWidth: 3)
+            .stroke(Color.green, lineWidth: 5)
             .opacity(0.7)
             .animation(.easeInOut(duration: 0.3), value: path)
         }
@@ -422,7 +422,7 @@ struct NetworkGraphView: View {
             networkState.endNode = nil
             networkState.currentPath = []
         } else if node.id == pathFindingStartNode?.id {
-            // Tapping start node again - reset
+            // Tapping start node again - reset both start and end
             print("\nTapped start node again, resetting selection")
             pathFindingStartNode = nil
             pathFindingEndNode = nil
@@ -430,8 +430,15 @@ struct NetworkGraphView: View {
             networkState.startNode = nil
             networkState.endNode = nil
             networkState.currentPath = []
+        } else if node.id == pathFindingEndNode?.id {
+            // Tapping end node again - deselect end node only
+            print("\nTapped end node again, deselecting end node")
+            pathFindingEndNode = nil
+            currentPath = []
+            networkState.endNode = nil
+            networkState.currentPath = []
         } else if pathFindingEndNode == nil {
-            // Second tap - try to set as end node
+            // No end node selected - try to set as end node
             if let start = pathFindingStartNode {
                 print("\nAttempting to find path from \(start.name) to \(node.name)")
                 let paths = networkState.findPaths(from: start, to: node)
@@ -453,8 +460,8 @@ struct NetworkGraphView: View {
                 }
             }
         } else {
-            // Already have both start and end - reset to new start
-            print("\nResetting to new start node: \(node.name)")
+            // Already have both start and end - set as new start node
+            print("\nSetting new start node: \(node.name)")
             pathFindingStartNode = node
             pathFindingEndNode = nil
             currentPath = []
