@@ -8,6 +8,7 @@
 - Clear data feature with confirmation dialog
 - Path finding mode with shortest path visualization
 - Debug logging for path finding and connection operations
+- Automatic node repositioning on device rotation
 
 ### Changed
 - Improved connection handling to ensure bidirectional connections are properly saved
@@ -31,6 +32,7 @@
 - Fixed connection persistence issues that caused some nodes to appear disconnected
 - Fixed path finding node selection behavior to be more intuitive
 - Fixed path visualization to be more visible with thicker strokes
+- Fixed node positioning to maintain visibility during device rotation
 
 ## [0.1.0] - 2024-03-XX
 

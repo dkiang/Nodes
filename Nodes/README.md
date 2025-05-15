@@ -9,6 +9,7 @@ A SwiftUI application for creating and visualizing networks of nodes and their c
 - Drag nodes to position them
 - Activate/deactivate nodes
 - Undo/redo node movements and creation/deletion
+- Automatic repositioning on device rotation to maintain visibility
 
 ### Connection Management
 - Create bidirectional connections between nodes
@@ -46,6 +47,7 @@ A SwiftUI application for creating and visualizing networks of nodes and their c
 3. Drag nodes to position them
 4. Double-tap a node to activate/deactivate it
 5. Use the undo button to revert changes
+6. Rotate the device to automatically reposition nodes for optimal visibility
 
 ### Creating Connections
 1. Tap a node to start creating a connection

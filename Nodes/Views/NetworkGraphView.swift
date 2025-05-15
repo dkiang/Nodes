@@ -256,6 +256,7 @@ struct NetworkGraphView: View {
     @State private var pathFindingStartNode: StudentNode?
     @State private var pathFindingEndNode: StudentNode?
     @State private var currentPath: [StudentNode] = []
+    @State private var previousViewSize: CGSize = .zero
     
     private func nodeColor(for node: StudentNode) -> Color {
         let colors: [Color] = [.red, .orange, .yellow, .green, .blue, .indigo, .purple]
@@ -270,6 +271,53 @@ struct NetworkGraphView: View {
         networkState.isDrawingConnection && 
         networkState.connectionStartNode != nil && 
         tempConnectionEnd != nil
+    }
+    
+    private func repositionNodesForNewSize(_ newSize: CGSize) {
+        guard !networkState.nodes.isEmpty else { return }
+        
+        // Calculate safe margins (30 points from edges)
+        let safeMargin: CGFloat = 30
+        let usableWidth = newSize.width - (2 * safeMargin)
+        let usableHeight = newSize.height - (2 * safeMargin)
+        
+        // Find the current bounds of all nodes
+        var minX = CGFloat.infinity
+        var maxX = -CGFloat.infinity
+        var minY = CGFloat.infinity
+        var maxY = -CGFloat.infinity
+        
+        for node in networkState.nodes {
+            minX = min(minX, node.position.x)
+            maxX = max(maxX, node.position.x)
+            minY = min(minY, node.position.y)
+            maxY = max(maxY, node.position.y)
+        }
+        
+        let currentWidth = maxX - minX
+        let currentHeight = maxY - minY
+        
+        // If nodes are already within bounds, no need to reposition
+        if minX >= safeMargin && maxX <= (newSize.width - safeMargin) &&
+           minY >= safeMargin && maxY <= (newSize.height - safeMargin) {
+            return
+        }
+        
+        // Calculate scale factors to fit within new bounds
+        let scaleX = usableWidth / max(currentWidth, 1)
+        let scaleY = usableHeight / max(currentHeight, 1)
+        let scale = min(scaleX, scaleY)
+        
+        // Calculate new positions for all nodes
+        for node in networkState.nodes {
+            let relativeX = (node.position.x - minX) / currentWidth
+            let relativeY = (node.position.y - minY) / currentHeight
+            
+            let newX = safeMargin + (relativeX * usableWidth)
+            let newY = safeMargin + (relativeY * usableHeight)
+            
+            networkState.updateNodePosition(node, newPosition: CGPoint(x: newX, y: newY))
+        }
     }
     
     var body: some View {
@@ -349,8 +397,19 @@ struct NetworkGraphView: View {
                         networkState.scale = scale
                     }
             )
-            .onAppear { viewSize = geometry.size }
-            .onChange(of: geometry.size) { viewSize = $0 }
+            .onAppear { 
+                viewSize = geometry.size
+                previousViewSize = geometry.size
+            }
+            .onChange(of: geometry.size) { newSize in
+                // Only reposition if the size change is significant (e.g., rotation)
+                if abs(newSize.width - previousViewSize.width) > 50 ||
+                   abs(newSize.height - previousViewSize.height) > 50 {
+                    repositionNodesForNewSize(newSize)
+                }
+                viewSize = newSize
+                previousViewSize = newSize
+            }
             .onChange(of: networkState.isPathFindingMode) { newValue in
                 if !newValue {
                     pathFindingStartNode = nil
