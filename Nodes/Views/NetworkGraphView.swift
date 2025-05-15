@@ -123,6 +123,8 @@ struct NodeView: View {
     let isSelected: Bool
     let isStartNode: Bool
     let isEndNode: Bool
+    let isInSelectionMode: Bool
+    let isNodeSelected: Bool
     @State private var isDragging = false
     
     var body: some View {
@@ -139,10 +141,22 @@ struct NodeView: View {
             .overlay(
                 Circle()
                     .stroke(
-                        isStartNode || isEndNode ? Color.black : 
-                        isSelected ? Color.yellow : Color.clear,
-                        lineWidth: 3
+                        isStartNode || isEndNode ? Color.black :
+                        isNodeSelected ? Color.yellow :
+                        isSelected ? Color.blue :
+                        Color.clear,
+                        lineWidth: isNodeSelected ? 4 : 3
                     )
+            )
+            .overlay(
+                Group {
+                    if isInSelectionMode {
+                        Image(systemName: isNodeSelected ? "checkmark.circle.fill" : "circle")
+                            .foregroundColor(.white)
+                            .font(.system(size: 20))
+                            .shadow(radius: 1)
+                    }
+                }
             )
             .shadow(radius: isDragging ? 8 : 4)
             .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isDragging)
@@ -157,6 +171,8 @@ struct NodeGestureView: View {
     let isStartNode: Bool
     let isEndNode: Bool
     let isPathFindingMode: Bool
+    let isSelectionMode: Bool
+    let isNodeSelected: Bool
     let onDragStart: (StudentNode) -> Void
     let onDrag: (StudentNode, CGSize) -> Void
     let onDragEnd: (StudentNode) -> Void
@@ -169,25 +185,27 @@ struct NodeGestureView: View {
             color: color,
             isSelected: false,
             isStartNode: isStartNode,
-            isEndNode: isEndNode
+            isEndNode: isEndNode,
+            isInSelectionMode: isSelectionMode,
+            isNodeSelected: isNodeSelected
         )
         .offset(isDragged ? dragState : localDragState)
         .scaleEffect((isDragged && dragState != .zero) || localDragState != .zero ? 1.1 : 1.0)
         .gesture(
             DragGesture()
                 .onChanged { _ in
-                    if !isPathFindingMode && localDragState == .zero {
+                    if !isPathFindingMode && !isSelectionMode && localDragState == .zero {
                         onDragStart(node)
                     }
                 }
                 .updating($localDragState) { value, state, _ in
-                    if !isPathFindingMode {
+                    if !isPathFindingMode && !isSelectionMode {
                         state = value.translation
                         onDrag(node, value.translation)
                     }
                 }
                 .onEnded { _ in
-                    if !isPathFindingMode {
+                    if !isPathFindingMode && !isSelectionMode {
                         onDragEnd(node)
                     }
                 }
@@ -207,6 +225,8 @@ struct NetworkNodesView: View {
     let pathFindingStartNode: StudentNode?
     let pathFindingEndNode: StudentNode?
     let isPathFindingMode: Bool
+    let isSelectionMode: Bool
+    let selectedNodes: Set<UUID>
     let onNodeTap: (StudentNode) -> Void
     let onNodeDragStart: (StudentNode) -> Void
     let onNodeDrag: (StudentNode, CGSize) -> Void
@@ -229,6 +249,8 @@ struct NetworkNodesView: View {
             isStartNode: node.id == pathFindingStartNode?.id,
             isEndNode: node.id == pathFindingEndNode?.id,
             isPathFindingMode: isPathFindingMode,
+            isSelectionMode: isSelectionMode,
+            isNodeSelected: selectedNodes.contains(node.id),
             onDragStart: onNodeDragStart,
             onDrag: onNodeDrag,
             onDragEnd: onNodeDragEnd,
@@ -257,6 +279,7 @@ struct NetworkGraphView: View {
     @State private var pathFindingEndNode: StudentNode?
     @State private var currentPath: [StudentNode] = []
     @State private var previousViewSize: CGSize = .zero
+    @FocusState private var isConnectionFieldFocused: Bool
     
     private func nodeColor(for node: StudentNode) -> Color {
         let colors: [Color] = [.red, .orange, .yellow, .green, .blue, .indigo, .purple]
@@ -363,6 +386,8 @@ struct NetworkGraphView: View {
                     pathFindingStartNode: pathFindingStartNode,
                     pathFindingEndNode: pathFindingEndNode,
                     isPathFindingMode: networkState.isPathFindingMode,
+                    isSelectionMode: networkState.isSelectionMode,
+                    selectedNodes: networkState.selectedNodes,
                     onNodeTap: handleNodeTap,
                     onNodeDragStart: { node in
                         networkState.startNodeDrag(node)
@@ -383,14 +408,6 @@ struct NetworkGraphView: View {
                     }
                 )
             }
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: { networkState.undo() }) {
-                        Image(systemName: "arrow.uturn.backward")
-                    }
-                    .disabled(!networkState.canUndo)
-                }
-            }
             .gesture(
                 MagnificationGesture()
                     .onChanged { scale in
@@ -400,13 +417,29 @@ struct NetworkGraphView: View {
             .onAppear { 
                 viewSize = geometry.size
                 previousViewSize = geometry.size
+                networkState.currentViewSize = geometry.size
+                networkState.lastViewSize = geometry.size
             }
             .onChange(of: geometry.size) { newSize in
-                // Only reposition if the size change is significant (e.g., rotation)
-                if abs(newSize.width - previousViewSize.width) > 50 ||
-                   abs(newSize.height - previousViewSize.height) > 50 {
+                networkState.currentViewSize = newSize
+                
+                // Check if this is a rotation (significant width/height change)
+                let isRotation = abs(newSize.width - previousViewSize.width) > 50 ||
+                               abs(newSize.height - previousViewSize.height) > 50
+                
+                // Only reposition if:
+                // 1. It's a rotation (significant size change)
+                // 2. We're not showing any modal sheets
+                // 3. The size is different from our last known good size
+                if isRotation && 
+                   !showingConnectionAlert && 
+                   !networkState.isShowingModal &&
+                   networkState.lastViewSize != newSize {
+                    print("DEBUG: Repositioning nodes for rotation")
                     repositionNodesForNewSize(newSize)
+                    networkState.lastViewSize = newSize
                 }
+                
                 viewSize = newSize
                 previousViewSize = newSize
             }
@@ -423,6 +456,10 @@ struct NetworkGraphView: View {
                 Form {
                     Section(header: Text("Connection Details")) {
                         TextField("Common Interest", text: $commonInterest)
+                            .focused($isConnectionFieldFocused)
+                            .submitLabel(.done)
+                            .textInputAutocapitalization(.words)
+                            .autocorrectionDisabled()
                     }
                 }
                 .navigationTitle("New Connection")
@@ -430,6 +467,7 @@ struct NetworkGraphView: View {
                     leading: Button("Cancel") {
                         networkState.isDrawingConnection = false
                         networkState.connectionStartNode = nil
+                        tempConnectionEnd = nil
                         commonInterest = ""
                         showingConnectionAlert = false
                     },
@@ -440,17 +478,22 @@ struct NetworkGraphView: View {
                         }
                         networkState.isDrawingConnection = false
                         networkState.connectionStartNode = nil
+                        tempConnectionEnd = nil
                         commonInterest = ""
                         showingConnectionAlert = false
                     }
                     .disabled(commonInterest.isEmpty)
                 )
+                .forceKeyboardFocus(isFocused: $isConnectionFieldFocused)
             }
+            .interactiveDismissDisabled()
         }
     }
     
     private func handleNodeTap(_ node: StudentNode) {
-        if networkState.isPathFindingMode {
+        if networkState.isSelectionMode {
+            networkState.toggleNodeSelection(node)
+        } else if networkState.isPathFindingMode {
             handlePathFindingTap(node)
         } else {
             handleConnectionTap(node)
@@ -536,11 +579,12 @@ struct NetworkGraphView: View {
             if let startNode = networkState.connectionStartNode, startNode.id != node.id {
                 tempConnectionEnd = node.position
                 showingConnectionAlert = true
+                isConnectionFieldFocused = true
             }
         } else {
             networkState.isDrawingConnection = true
             networkState.connectionStartNode = node
-            tempConnectionEnd = nil // Reset the end point when starting a new connection
+            tempConnectionEnd = nil
         }
     }
 } 

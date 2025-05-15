@@ -1,96 +1,102 @@
-# Nodes
+# Nodes - Student Connection Visualization
 
-A SwiftUI application for creating and visualizing networks of nodes and their connections. Built with SwiftUI and CoreData for persistent storage.
+A SwiftUI application for visualizing and managing connections between students based on common interests.
 
 ## Features
 
 ### Node Management
-- Create and delete nodes
-- Drag nodes to position them
-- Activate/deactivate nodes
-- Undo/redo node movements and creation/deletion
-- Automatic repositioning on device rotation to maintain visibility
+- Add students as nodes to the network
+- Drag and drop nodes to position them
+- Automatic node repositioning during device rotation
+- Nodes maintain their positions during modal presentations
+- Batch selection and activation/deactivation of nodes
+- Visual feedback for selected nodes with checkmark indicators
 
 ### Connection Management
-- Create bidirectional connections between nodes
-- Specify common interests for connections
-- Delete connections
-- Connections are automatically saved and persisted
-- Connections respect node activation state (dimmed when either node is inactive)
+- Create bidirectional connections between students
+- Specify common interests for each connection
+- Visual representation of connections with interest labels
+- Delete connections with a single tap
+- Improved connection line visualization
+- Automatic connection updates during node activation/deactivation
 
 ### Path Finding
 - Toggle path finding mode to find connections between nodes
-- Automatically finds the shortest path between selected nodes
-- Visualizes the path with a thick green highlighted connection
-- Disables node dragging while in path finding mode
+- Automatic finding of the shortest path between selected nodes
+- Visualization of the path with a thick green highlighted connection
 - Intuitive node selection behavior:
-  - First tap on any node sets it as the start node
-  - Tapping the start node again resets both start and end nodes
-  - Tapping the end node again only deselects the end node
-  - Tapping a new node when only start is selected tries to set it as end node
-  - Tapping a new node when both are selected makes it the new start node
-- End nodes are only selectable if a valid path exists
-- Clear visual feedback with black borders for selected nodes
-- Thick green path visualization for better visibility
+  - First tap sets the start node
+  - Second tap on a different node sets the end node
+  - Tapping the start node again clears both selections
+  - Tapping the end node again only clears the end node
+- Path updates automatically when nodes are activated/deactivated
+- Disabled node dragging while in path finding mode
 
-### Data Management
-- Automatic saving of all changes
-- Clear all data option with confirmation dialog
-- Persistent storage using CoreData
-- Undo/redo support for all operations
+### User Interface
+- Clean, modern interface with intuitive controls
+- Responsive layout that adapts to device orientation
+- Modal dialogs for adding students and connections
+- Immediate keyboard focus for text input fields
+- Toolbar menu with quick access to common actions
+- Undo support for all operations
+- Clear visual feedback for all interactions
+
+### Node States
+- Active/Inactive states for nodes
+- Visual distinction between active and inactive nodes
+- Greyed-out appearance for inactive nodes and their connections
+- Batch activation/deactivation of selected nodes
+- Automatic path updates when node states change
 
 ## Usage
 
-### Creating and Managing Nodes
-1. Tap the "+" button to create a new node
-2. Enter the node's name
-3. Drag nodes to position them
-4. Double-tap a node to activate/deactivate it
-5. Use the undo button to revert changes
-6. Rotate the device to automatically reposition nodes for optimal visibility
+### Adding Students
+1. Tap the "Add Student" button
+2. Enter the student's name
+3. The student will appear as a node in the network
+4. Drag the node to position it
 
 ### Creating Connections
 1. Tap a node to start creating a connection
 2. Tap another node to complete the connection
-3. Enter the common interest for the connection
-4. Connections are automatically bidirectional
+3. Enter the common interest in the dialog
+4. A bidirectional connection will be created between the nodes
 
-### Path Finding
-1. Toggle path finding mode using the "Find Path" button
-2. Select a start node (will be highlighted with a black border)
-3. Select an end node (will be highlighted with a black border)
-   - If you tap the start node again, both selections will be cleared
-   - If you tap the end node again, only the end node will be deselected
-   - If you tap a new node when both are selected, it becomes the new start node
-4. Available paths will be shown with thick green animated lines
-5. Exit path finding mode to return to normal operation
+### Finding Paths
+1. Tap the "Find Path" button to enter path finding mode
+2. Tap a node to set it as the start node
+3. Tap another node to set it as the end node
+4. The shortest path between the nodes will be highlighted
+5. Tap the start node again to clear the selection
+6. Tap the end node again to clear only the end node
 
-### Data Management
-- Use the menu to access additional options
-- "Clear All Data" will remove all nodes and connections
-- "Undo" will revert the last action
-- All changes are automatically saved
+### Managing Node States
+1. Tap "Select Nodes" in the toolbar menu
+2. Tap nodes to select them
+3. Use "Deactivate Selected" or "Activate Selected" to change their states
+4. Tap "Cancel Selection" to exit selection mode
+
+### Device Rotation
+- Nodes automatically reposition to remain visible
+- Connections and paths update smoothly
+- Node positions are preserved during modal presentations
+- Layout adapts to maintain usability in any orientation
 
 ## Technical Details
 
 ### Architecture
-- Built with SwiftUI for the user interface
-- Uses CoreData for persistent storage
-- Implements BFS (Breadth-First Search) for path finding
-- Supports bidirectional connections with proper persistence
+- SwiftUI-based user interface
+- CoreData for persistent storage
+- Observable state management
+- Bidirectional connection model
+- Efficient path finding algorithms (BFS with DFS fallback)
 
-### Data Model
-- `StudentNode`: Represents a node in the network
-  - Properties: id, name, position, isActive, connections
-- `Connection`: Represents a connection between nodes
-  - Properties: id, fromNodeId, toNodeId, commonInterest
-- CoreData entities: NodeEntity and ConnectionEntity
-
-### Path Finding
-- Uses BFS algorithm to find the shortest path
-- Considers node activation state
-- Falls back to DFS if no path is found with BFS
-- Visualizes the path with animated connections
+### Performance
+- Optimized node repositioning
+- Efficient connection management
+- Smooth animations and transitions
+- Responsive user interface
+- Memory-efficient data structures
 
 ## Requirements
 - iOS 15.0+
@@ -103,4 +109,7 @@ A SwiftUI application for creating and visualizing networks of nodes and their c
 3. Build and run on your device or simulator
 
 ## Contributing
-Feel free to submit issues and enhancement requests! 
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## License
+This project is licensed under the MIT License - see the LICENSE file for details. 

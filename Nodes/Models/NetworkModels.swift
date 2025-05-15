@@ -59,6 +59,13 @@ class NetworkState: ObservableObject {
     @Published var offset: CGSize = .zero
     @Published var isPathFindingMode: Bool = false
     @Published var showClearDataAlert: Bool = false
+    @Published var isSelectionMode: Bool = false
+    @Published var selectedNodes: Set<UUID> = []
+    
+    // View size tracking
+    @Published var currentViewSize: CGSize = .zero
+    @Published var lastViewSize: CGSize = .zero
+    @Published var isShowingModal: Bool = false
     
     // Path finding
     @Published var startNode: StudentNode?
@@ -558,5 +565,42 @@ class NetworkState: ObservableObject {
         dfs(current: start, path: [start])
         print("DEBUG: Found \(paths.count) paths from \(start.name) to \(end.name)")
         return paths
+    }
+    
+    func toggleSelectionMode() {
+        isSelectionMode.toggle()
+        if !isSelectionMode {
+            selectedNodes.removeAll()
+        }
+    }
+    
+    func toggleNodeSelection(_ node: StudentNode) {
+        if selectedNodes.contains(node.id) {
+            selectedNodes.remove(node.id)
+        } else {
+            selectedNodes.insert(node.id)
+        }
+    }
+    
+    func deactivateSelectedNodes() {
+        for nodeId in selectedNodes {
+            if let node = nodes.first(where: { $0.id == nodeId }) {
+                toggleNodeActive(node)
+            }
+        }
+        selectedNodes.removeAll()
+        isSelectionMode = false
+    }
+    
+    func activateSelectedNodes() {
+        for nodeId in selectedNodes {
+            if let node = nodes.first(where: { $0.id == nodeId }) {
+                if !node.isActive {
+                    toggleNodeActive(node)
+                }
+            }
+        }
+        selectedNodes.removeAll()
+        isSelectionMode = false
     }
 } 

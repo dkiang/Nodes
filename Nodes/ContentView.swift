@@ -48,6 +48,12 @@ struct ContentView: View {
                 NetworkGraphView()
                     .environmentObject(networkState)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .onChange(of: showingAddStudent) { isShowing in
+                        networkState.isShowingModal = isShowing
+                        if isShowing {
+                            networkState.lastViewSize = networkState.currentViewSize
+                        }
+                    }
                 
                 // Control Panel
                 VStack(spacing: 12) {
@@ -81,6 +87,7 @@ struct ContentView: View {
                 AddStudentView(
                     isPresented: $showingAddStudent,
                     newStudentName: $newStudentName,
+                    networkState: networkState,
                     onAdd: { name in
                         let randomX = CGFloat.random(in: 100...300)
                         let randomY = CGFloat.random(in: 100...300)
@@ -90,29 +97,61 @@ struct ContentView: View {
             }
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Menu {
-                        Button(action: {
-                            networkState.showClearDataAlert = true
-                        }) {
-                            Label("Clear All Data", systemImage: "trash")
-                        }
-                        
+                    HStack(spacing: 16) {
                         if networkState.canUndo {
                             Button(action: {
                                 networkState.undo()
                             }) {
-                                Label("Undo", systemImage: "arrow.uturn.backward")
+                                Image(systemName: "arrow.uturn.backward")
                             }
                         }
                         
-                        Button(action: {
-                            networkState.isPathFindingMode.toggle()
-                        }) {
-                            Label(networkState.isPathFindingMode ? "Exit Find Path" : "Find Path", 
-                                  systemImage: networkState.isPathFindingMode ? "xmark.circle" : "arrow.triangle.branch")
+                        Menu {
+                            if networkState.isSelectionMode {
+                                Button(action: {
+                                    networkState.deactivateSelectedNodes()
+                                    updatePathAfterNodeDeactivation()
+                                }) {
+                                    Label("Deactivate Selected", systemImage: "circle.slash")
+                                }
+                                .disabled(networkState.selectedNodes.isEmpty)
+                                
+                                Button(action: {
+                                    networkState.activateSelectedNodes()
+                                    updatePathAfterNodeActivation()
+                                }) {
+                                    Label("Activate Selected", systemImage: "circle")
+                                }
+                                .disabled(networkState.selectedNodes.isEmpty)
+                                
+                                Button(action: {
+                                    networkState.toggleSelectionMode()
+                                }) {
+                                    Label("Cancel Selection", systemImage: "xmark.circle")
+                                }
+                            } else {
+                                Button(action: {
+                                    networkState.toggleSelectionMode()
+                                }) {
+                                    Label("Select Nodes", systemImage: "checkmark.circle")
+                                }
+                            }
+                            
+                            Button(action: {
+                                networkState.showClearDataAlert = true
+                            }) {
+                                Label("Clear All Data", systemImage: "trash")
+                            }
+                            
+                            Button(action: {
+                                networkState.isPathFindingMode.toggle()
+                            }) {
+                                Label(networkState.isPathFindingMode ? "Exit Find Path" : "Find Path", 
+                                      systemImage: networkState.isPathFindingMode ? "xmark.circle" : "arrow.triangle.branch")
+                            }
+                        } label: {
+                            Image(systemName: "ellipsis.circle")
                         }
-                    } label: {
-                        Image(systemName: "ellipsis.circle")
                     }
                 }
             }
@@ -126,11 +165,46 @@ struct ContentView: View {
             }
         }
     }
+
+    private func updatePathAfterNodeDeactivation() {
+        guard networkState.isPathFindingMode,
+              let start = networkState.startNode,
+              let end = networkState.endNode else { return }
+        
+        // Check if either start or end node is now inactive
+        if !start.isActive || !end.isActive {
+            // Clear the path if either node is inactive
+            networkState.currentPath = []
+            return
+        }
+        
+        // Try to find a new path that avoids inactive nodes
+        let paths = networkState.findPaths(from: start, to: end)
+        if let newPath = paths.first {
+            networkState.currentPath = newPath
+        } else {
+            // No valid path found, clear the current path
+            networkState.currentPath = []
+        }
+    }
+    
+    private func updatePathAfterNodeActivation() {
+        guard networkState.isPathFindingMode,
+              let start = networkState.startNode,
+              let end = networkState.endNode else { return }
+        
+        // Try to find a path now that some nodes are active
+        let paths = networkState.findPaths(from: start, to: end)
+        if let newPath = paths.first {
+            networkState.currentPath = newPath
+        }
+    }
 }
 
 struct AddStudentView: View {
     @Binding var isPresented: Bool
     @Binding var newStudentName: String
+    let networkState: NetworkState
     @FocusState private var isFocused: Bool
     let onAdd: (String) -> Void
     
@@ -149,6 +223,7 @@ struct AddStudentView: View {
             .navigationBarItems(
                 leading: Button("Cancel") {
                     isPresented = false
+                    networkState.isShowingModal = false
                     newStudentName = ""
                 },
                 trailing: Button("Add") {
@@ -156,6 +231,7 @@ struct AddStudentView: View {
                         onAdd(newStudentName)
                         newStudentName = ""
                         isPresented = false
+                        networkState.isShowingModal = false
                     }
                 }
                 .disabled(newStudentName.isEmpty)
