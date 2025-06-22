@@ -58,7 +58,6 @@ class NetworkState: ObservableObject {
     @Published var scale: CGFloat = 1.0
     @Published var offset: CGSize = .zero
     @Published var isPathFindingMode: Bool = false
-    @Published var showClearDataAlert: Bool = false
     @Published var isSelectionMode: Bool = false
     @Published var selectedNodes: Set<UUID> = []
     
@@ -94,33 +93,28 @@ class NetworkState: ObservableObject {
     
     init(context: NSManagedObjectContext) {
         self.viewContext = context
+        // Load nodes immediately with optimized query
         loadNodes()
     }
     
+    // Optimized synchronous loading for immediate startup
     private func loadNodes() {
-        let fetchRequest = NSFetchRequest<NSManagedObject>(entityName: "NodeEntity")
+        let fetchRequest: NSFetchRequest<NodeEntity> = NodeEntity.fetchRequest()
+        fetchRequest.relationshipKeyPathsForPrefetching = ["connections"]
         
         do {
             let nodeEntities = try viewContext.fetch(fetchRequest)
-            print("DEBUG: Loading \(nodeEntities.count) nodes from CoreData")
             
             nodes = nodeEntities.compactMap { entity -> StudentNode? in
-                guard let nodeEntity = entity as? NSManagedObject,
-                      let id = nodeEntity.value(forKey: "id") as? UUID,
-                      let name = nodeEntity.value(forKey: "name") as? String else {
-                    print("DEBUG: Failed to load node - missing required attributes")
+                guard let id = entity.id,
+                      let name = entity.name else {
                     return nil
                 }
                 
-                let positionX = nodeEntity.value(forKey: "positionX") as? Double ?? 0.0
-                let positionY = nodeEntity.value(forKey: "positionY") as? Double ?? 0.0
-                let isActive = nodeEntity.value(forKey: "isActive") as? Bool ?? true
-                
-                let connections = (nodeEntity.value(forKey: "connections") as? Set<NSManagedObject>)?.compactMap { conn -> Connection? in
-                    guard let connId = conn.value(forKey: "id") as? UUID,
-                          let toNodeId = conn.value(forKey: "toNodeId") as? UUID,
-                          let commonInterest = conn.value(forKey: "commonInterest") as? String else {
-                        print("DEBUG: Failed to load connection - missing required attributes")
+                let connections = (entity.connections?.allObjects as? [ConnectionEntity])?.compactMap { conn -> Connection? in
+                    guard let connId = conn.id,
+                          let toNodeId = conn.toNodeId,
+                          let commonInterest = conn.commonInterest else {
                         return nil
                     }
                     
@@ -132,30 +126,13 @@ class NetworkState: ObservableObject {
                     )
                 } ?? []
                 
-                print("DEBUG: Loaded node \(name) with \(connections.count) connections")
-                for conn in connections {
-                    print("DEBUG:   - Connection to \(conn.toNodeId) with interest: \(conn.commonInterest)")
-                }
-                
                 return StudentNode(
                     id: id,
                     name: name,
-                    position: CGPoint(x: positionX, y: positionY),
-                    isActive: isActive,
+                    position: CGPoint(x: entity.positionX, y: entity.positionY),
+                    isActive: entity.isActive,
                     connections: connections
                 )
-            }
-            
-            // Verify connections are bidirectional
-            for node in nodes {
-                for connection in node.connections {
-                    if let targetNode = nodes.first(where: { $0.id == connection.toNodeId }) {
-                        let hasReverseConnection = targetNode.connections.contains { $0.toNodeId == node.id }
-                        if !hasReverseConnection {
-                            print("DEBUG: Warning - Connection from \(node.name) to \(targetNode.name) is not bidirectional")
-                        }
-                    }
-                }
             }
             
         } catch {
@@ -347,21 +324,23 @@ class NetworkState: ObservableObject {
         if let index = nodes.firstIndex(where: { $0.id == node.id }) {
             let wasActive = nodes[index].isActive
             
-            // Update CoreData
-            let fetchRequest = NSFetchRequest<NSManagedObject>(entityName: "NodeEntity")
+            // Update in-memory immediately
+            nodes[index].isActive.toggle()
+            pushUndoAction(.toggleNodeActive(node.id, wasActive: wasActive))
+            
+            // Update CoreData with minimal overhead
+            let fetchRequest: NSFetchRequest<NodeEntity> = NodeEntity.fetchRequest()
             fetchRequest.predicate = NSPredicate(format: "id == %@", node.id as CVarArg)
+            fetchRequest.fetchLimit = 1
             
             do {
                 if let entity = try viewContext.fetch(fetchRequest).first {
-                    entity.setValue(!wasActive, forKey: "isActive")
-                    saveContext()
+                    entity.isActive = !wasActive
+                    try viewContext.save()
                 }
             } catch {
-                print("Error toggling node active state: \(error)")
+                print("Error updating node active state: \(error)")
             }
-            
-            nodes[index].isActive.toggle()
-            pushUndoAction(.toggleNodeActive(node.id, wasActive: wasActive))
             
             // Check if we need to re-route an active path
             recheckActivePath()
@@ -376,22 +355,25 @@ class NetworkState: ObservableObject {
         if let index = nodes.firstIndex(where: { $0.id == node.id }) {
             let oldPosition = nodes[index].position
             
-            // Update CoreData
-            let fetchRequest = NSFetchRequest<NSManagedObject>(entityName: "NodeEntity")
+            // Update in-memory immediately
+            nodes[index].position = newPosition
+            pushUndoAction(.updateNodePosition(node.id, oldPosition: oldPosition, newPosition: newPosition))
+            
+            // Update CoreData with minimal overhead
+            let fetchRequest: NSFetchRequest<NodeEntity> = NodeEntity.fetchRequest()
             fetchRequest.predicate = NSPredicate(format: "id == %@", node.id as CVarArg)
+            fetchRequest.fetchLimit = 1
             
             do {
                 if let entity = try viewContext.fetch(fetchRequest).first {
-                    entity.setValue(newPosition.x, forKey: "positionX")
-                    entity.setValue(newPosition.y, forKey: "positionY")
-                    saveContext()
+                    entity.positionX = newPosition.x
+                    entity.positionY = newPosition.y
+                    // Save without calling the expensive saveContext()
+                    try viewContext.save()
                 }
             } catch {
                 print("Error updating node position: \(error)")
             }
-            
-            nodes[index].position = newPosition
-            pushUndoAction(.updateNodePosition(node.id, oldPosition: oldPosition, newPosition: newPosition))
         }
     }
     

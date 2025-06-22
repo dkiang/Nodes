@@ -53,11 +53,21 @@ struct PersistenceController {
         if inMemory {
             container.persistentStoreDescriptions.first!.url = URL(fileURLWithPath: "/dev/null")
         }
+        
+        // Simple CoreData configuration for fast startup
+        container.persistentStoreDescriptions.forEach { storeDescription in
+            storeDescription.shouldMigrateStoreAutomatically = true
+            storeDescription.shouldInferMappingModelAutomatically = true
+            // Remove complex options that slow down startup
+        }
+        
         container.loadPersistentStores(completionHandler: { (storeDescription, error) in
             if let error = error as NSError? {
                 fatalError("Unresolved error \(error), \(error.userInfo)")
             }
         })
+        
+        // Simple view context configuration
         container.viewContext.automaticallyMergesChangesFromParent = true
     }
     

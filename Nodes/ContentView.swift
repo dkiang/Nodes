@@ -35,8 +35,8 @@ struct ContentView: View {
     @State private var showingAddStudent = false
     @State private var newStudentName = ""
     @State private var showingPathAlert = false
+    @State private var showingLessonNotes = false
     @FocusState private var isStudentNameFocused: Bool
-
     init() {
         let context = PersistenceController.shared.container.viewContext
         _networkState = StateObject(wrappedValue: NetworkState(context: context))
@@ -71,12 +71,38 @@ struct ContentView: View {
                         }
                         .buttonStyle(.bordered)
                         .tint(networkState.isPathFindingMode ? .red : .blue)
+                        
+                        Button(action: { networkState.toggleSelectionMode() }) {
+                            Label(networkState.isSelectionMode ? "Cancel Select" : "Select Nodes", systemImage: "checkmark.circle")
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(networkState.isSelectionMode ? .red : .blue)
                     }
                     
                     if networkState.isPathFindingMode {
                         Text("Select start and end nodes to find paths")
                             .font(.caption)
                             .foregroundColor(.secondary)
+                    }
+                    
+                    if networkState.isSelectionMode && !networkState.selectedNodes.isEmpty {
+                        HStack {
+                            Button(action: {
+                                networkState.activateSelectedNodes()
+                            }) {
+                                Label("Activate Selected", systemImage: "circle")
+                            }
+                            .buttonStyle(.bordered)
+                            .tint(.green)
+                            
+                            Button(action: {
+                                networkState.deactivateSelectedNodes()
+                            }) {
+                                Label("Deactivate Selected", systemImage: "circle.slash")
+                            }
+                            .buttonStyle(.bordered)
+                            .tint(.orange)
+                        }
                     }
                 }
                 .padding()
@@ -95,6 +121,12 @@ struct ContentView: View {
                     }
                 )
             }
+            .sheet(isPresented: $showingLessonNotes) {
+                LessonNotesView(
+                    isPresented: $showingLessonNotes,
+                    networkState: networkState
+                )
+            }
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     HStack(spacing: 16) {
@@ -106,99 +138,17 @@ struct ContentView: View {
                             }
                         }
                         
-                        Menu {
-                            if networkState.isSelectionMode {
-                                Button(action: {
-                                    networkState.deactivateSelectedNodes()
-                                    updatePathAfterNodeDeactivation()
-                                }) {
-                                    Label("Deactivate Selected", systemImage: "circle.slash")
-                                }
-                                .disabled(networkState.selectedNodes.isEmpty)
-                                
-                                Button(action: {
-                                    networkState.activateSelectedNodes()
-                                    updatePathAfterNodeActivation()
-                                }) {
-                                    Label("Activate Selected", systemImage: "circle")
-                                }
-                                .disabled(networkState.selectedNodes.isEmpty)
-                                
-                                Button(action: {
-                                    networkState.toggleSelectionMode()
-                                }) {
-                                    Label("Cancel Selection", systemImage: "xmark.circle")
-                                }
-                            } else {
-                                Button(action: {
-                                    networkState.toggleSelectionMode()
-                                }) {
-                                    Label("Select Nodes", systemImage: "checkmark.circle")
-                                }
-                            }
-                            
-                            Button(action: {
-                                networkState.showClearDataAlert = true
-                            }) {
-                                Label("Clear All Data", systemImage: "trash")
-                            }
-                            
-                            Button(action: {
-                                networkState.isPathFindingMode.toggle()
-                            }) {
-                                Label(networkState.isPathFindingMode ? "Exit Find Path" : "Find Path", 
-                                      systemImage: networkState.isPathFindingMode ? "xmark.circle" : "arrow.triangle.branch")
-                            }
-                        } label: {
-                            Image(systemName: "ellipsis.circle")
+                        Button(action: {
+                            showingLessonNotes = true
+                        }) {
+                            Image(systemName: "info.circle")
                         }
                     }
                 }
             }
-            .alert("Clear All Data", isPresented: $networkState.showClearDataAlert) {
-                Button("Cancel", role: .cancel) { }
-                Button("Clear", role: .destructive) {
-                    networkState.clearAllData()
-                }
-            } message: {
-                Text("Are you sure you want to clear all nodes and connections? This action cannot be undone.")
-            }
         }
     }
 
-    private func updatePathAfterNodeDeactivation() {
-        guard networkState.isPathFindingMode,
-              let start = networkState.startNode,
-              let end = networkState.endNode else { return }
-        
-        // Check if either start or end node is now inactive
-        if !start.isActive || !end.isActive {
-            // Clear the path if either node is inactive
-            networkState.currentPath = []
-            return
-        }
-        
-        // Try to find a new path that avoids inactive nodes
-        let paths = networkState.findPaths(from: start, to: end)
-        if let newPath = paths.first {
-            networkState.currentPath = newPath
-        } else {
-            // No valid path found, clear the current path
-            networkState.currentPath = []
-        }
-    }
-    
-    private func updatePathAfterNodeActivation() {
-        guard networkState.isPathFindingMode,
-              let start = networkState.startNode,
-              let end = networkState.endNode else { return }
-        
-        // Try to find a path now that some nodes are active
-        let paths = networkState.findPaths(from: start, to: end)
-        if let newPath = paths.first {
-            networkState.currentPath = newPath
-        }
-    }
 }
 
 struct AddStudentView: View {
