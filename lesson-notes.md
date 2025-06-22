@@ -1,4 +1,4 @@
-# **Quick summary**
+# Quick summary
 Add nodes to the map, and build connections between them. Click **Find Path** to highlight the shortest path (using BFS) between two nodes. Double-tap any node to deactivate it. This illustrates the concept of fault tolerance within a network.
 
 In the classroom, this is a great getting-to-know you activity.
