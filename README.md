@@ -30,6 +30,12 @@ A SwiftUI app for visualizing and managing student connections in a classroom ne
 - Black border highlighting for selected nodes
 - Prevention of invalid path selections
 - Improved node selection and path display
+- Enhanced interactive path finding
+  - Node dragging enabled during path finding mode
+  - Real-time shortest path calculation and updates
+  - Automatic path re-routing when nodes become inactive
+  - Dynamic path visualization that moves with dragged nodes
+  - Immediate path updates when nodes are reactivated
 
 ### Data Management
 - Persistent storage using CoreData
@@ -74,8 +80,12 @@ A SwiftUI app for visualizing and managing student connections in a classroom ne
 1. Enter path finding mode using the "Find Path" button
 2. Select a start node (will be highlighted with a black border)
 3. Select an end node (will be highlighted with a black border)
-4. Available paths will be shown with animated lines
-5. Exit path finding mode to return to normal operation
+4. The shortest available path will be shown with a green highlighted line
+5. Drag any node - the path visualization moves with the nodes
+6. Double-tap nodes to activate/deactivate them
+   - Path automatically re-routes around inactive nodes
+   - Path updates to shorter routes when nodes are reactivated
+7. Exit path finding mode to return to normal operation
 
 ### Managing Data
 - Use the menu (ellipsis) in the toolbar to access:

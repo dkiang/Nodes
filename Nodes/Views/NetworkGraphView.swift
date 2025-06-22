@@ -100,18 +100,47 @@ struct NetworkConnectionsView: View {
 // MARK: - Path Views
 struct PathVisualizationView: View {
     let path: [StudentNode]
+    let nodes: [StudentNode]  // Current nodes with updated positions
+    let draggedNode: StudentNode?
+    let dragState: CGSize
+    
+    private func getCurrentNode(for pathNode: StudentNode) -> StudentNode? {
+        return nodes.first(where: { $0.id == pathNode.id })
+    }
+    
+    private func getNodePosition(_ node: StudentNode, isDragged: Bool) -> CGPoint {
+        if isDragged {
+            return CGPoint(
+                x: node.position.x + dragState.width,
+                y: node.position.y + dragState.height
+            )
+        }
+        return node.position
+    }
     
     var body: some View {
         ForEach(path.indices.dropLast(), id: \.self) { index in
-            let from = path[index]
-            let to = path[index + 1]
-            Path { path in
-                path.move(to: from.position)
-                path.addLine(to: to.position)
+            let pathFromNode = path[index]
+            let pathToNode = path[index + 1]
+            
+            // Get current nodes with updated positions
+            guard let currentFromNode = getCurrentNode(for: pathFromNode),
+                  let currentToNode = getCurrentNode(for: pathToNode) else {
+                return AnyView(EmptyView())
             }
-            .stroke(Color.green, lineWidth: 5)
-            .opacity(0.7)
-            .animation(.easeInOut(duration: 0.3), value: path)
+            
+            let fromPosition = getNodePosition(currentFromNode, isDragged: draggedNode?.id == currentFromNode.id)
+            let toPosition = getNodePosition(currentToNode, isDragged: draggedNode?.id == currentToNode.id)
+            
+            return AnyView(
+                Path { path in
+                    path.move(to: fromPosition)
+                    path.addLine(to: toPosition)
+                }
+                .stroke(Color.green, lineWidth: 5)
+                .opacity(0.7)
+                .animation(.easeInOut(duration: 0.3), value: path)
+            )
         }
     }
 }
@@ -134,7 +163,7 @@ struct NodeView: View {
             .overlay(
                 Text(node.name)
                     .font(.caption)
-                    .foregroundColor(.white)
+                    .foregroundColor(node.isActive ? .white : .white.opacity(0.7))
                     .multilineTextAlignment(.center)
                     .padding(4)
             )
@@ -159,6 +188,7 @@ struct NodeView: View {
                 }
             )
             .shadow(radius: isDragging ? 8 : 4)
+            .opacity(node.isActive ? 1.0 : 0.6)
             .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isDragging)
     }
 }
@@ -177,6 +207,7 @@ struct NodeGestureView: View {
     let onDrag: (StudentNode, CGSize) -> Void
     let onDragEnd: (StudentNode) -> Void
     let onTap: (StudentNode) -> Void
+    let onDoubleTap: (StudentNode) -> Void
     @GestureState private var localDragState = CGSize.zero
     
     var body: some View {
@@ -194,24 +225,27 @@ struct NodeGestureView: View {
         .gesture(
             DragGesture()
                 .onChanged { _ in
-                    if !isPathFindingMode && !isSelectionMode && localDragState == .zero {
+                    if !isSelectionMode && localDragState == .zero {
                         onDragStart(node)
                     }
                 }
                 .updating($localDragState) { value, state, _ in
-                    if !isPathFindingMode && !isSelectionMode {
+                    if !isSelectionMode {
                         state = value.translation
                         onDrag(node, value.translation)
                     }
                 }
                 .onEnded { _ in
-                    if !isPathFindingMode && !isSelectionMode {
+                    if !isSelectionMode {
                         onDragEnd(node)
                     }
                 }
         )
         .onTapGesture {
             onTap(node)
+        }
+        .onTapGesture(count: 2) {
+            onDoubleTap(node)
         }
         .animation(.spring(response: 0.3, dampingFraction: 0.6), value: localDragState)
     }
@@ -228,6 +262,7 @@ struct NetworkNodesView: View {
     let isSelectionMode: Bool
     let selectedNodes: Set<UUID>
     let onNodeTap: (StudentNode) -> Void
+    let onNodeDoubleTap: (StudentNode) -> Void
     let onNodeDragStart: (StudentNode) -> Void
     let onNodeDrag: (StudentNode, CGSize) -> Void
     let onNodeDragEnd: (StudentNode) -> Void
@@ -254,7 +289,8 @@ struct NetworkNodesView: View {
             onDragStart: onNodeDragStart,
             onDrag: onNodeDrag,
             onDragEnd: onNodeDragEnd,
-            onTap: onNodeTap
+            onTap: onNodeTap,
+            onDoubleTap: onNodeDoubleTap
         )
         .position(node.position)
     }
@@ -277,7 +313,6 @@ struct NetworkGraphView: View {
     @State private var viewSize: CGSize = .zero
     @State private var pathFindingStartNode: StudentNode?
     @State private var pathFindingEndNode: StudentNode?
-    @State private var currentPath: [StudentNode] = []
     @State private var previousViewSize: CGSize = .zero
     @FocusState private var isConnectionFieldFocused: Bool
     
@@ -362,7 +397,12 @@ struct NetworkGraphView: View {
                 
                 // Path visualization
                 if let start = pathFindingStartNode, let end = pathFindingEndNode {
-                    PathVisualizationView(path: currentPath)
+                    PathVisualizationView(
+                        path: networkState.currentPath,
+                        nodes: networkState.nodes,
+                        draggedNode: draggedNode,
+                        dragState: dragState
+                    )
                 }
                 
                 // Temporary connection line - only show when we have both start and end points
@@ -389,6 +429,7 @@ struct NetworkGraphView: View {
                     isSelectionMode: networkState.isSelectionMode,
                     selectedNodes: networkState.selectedNodes,
                     onNodeTap: handleNodeTap,
+                    onNodeDoubleTap: handleNodeDoubleTap,
                     onNodeDragStart: { node in
                         networkState.startNodeDrag(node)
                     },
@@ -447,7 +488,6 @@ struct NetworkGraphView: View {
                 if !newValue {
                     pathFindingStartNode = nil
                     pathFindingEndNode = nil
-                    currentPath = []
                 }
             }
         }
@@ -500,6 +540,10 @@ struct NetworkGraphView: View {
         }
     }
     
+    private func handleNodeDoubleTap(_ node: StudentNode) {
+        networkState.toggleNodeActive(node)
+    }
+    
     private func handlePathFindingTap(_ node: StudentNode) {
         print("\n=== Path Finding Tap ===")
         print("Tapped node: \(node.name)")
@@ -520,7 +564,6 @@ struct NetworkGraphView: View {
             pathFindingStartNode = node
             networkState.startNode = node
             pathFindingEndNode = nil
-            currentPath = []
             networkState.endNode = nil
             networkState.currentPath = []
         } else if node.id == pathFindingStartNode?.id {
@@ -528,7 +571,6 @@ struct NetworkGraphView: View {
             print("\nTapped start node again, resetting selection")
             pathFindingStartNode = nil
             pathFindingEndNode = nil
-            currentPath = []
             networkState.startNode = nil
             networkState.endNode = nil
             networkState.currentPath = []
@@ -536,7 +578,6 @@ struct NetworkGraphView: View {
             // Tapping end node again - deselect end node only
             print("\nTapped end node again, deselecting end node")
             pathFindingEndNode = nil
-            currentPath = []
             networkState.endNode = nil
             networkState.currentPath = []
         } else if pathFindingEndNode == nil {
@@ -551,7 +592,6 @@ struct NetworkGraphView: View {
                         let pathString = shortestPath.map { $0.name }.joined(separator: " -> ")
                         print("Path: \(pathString)")
                         print("Path length: \(shortestPath.count) nodes")
-                        currentPath = shortestPath
                         networkState.currentPath = shortestPath
                     }
                     pathFindingEndNode = node
@@ -566,7 +606,6 @@ struct NetworkGraphView: View {
             print("\nSetting new start node: \(node.name)")
             pathFindingStartNode = node
             pathFindingEndNode = nil
-            currentPath = []
             networkState.startNode = node
             networkState.endNode = nil
             networkState.currentPath = []

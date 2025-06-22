@@ -362,19 +362,17 @@ class NetworkState: ObservableObject {
             
             nodes[index].isActive.toggle()
             pushUndoAction(.toggleNodeActive(node.id, wasActive: wasActive))
+            
+            // Check if we need to re-route an active path
+            recheckActivePath()
         }
     }
     
     func startNodeDrag(_ node: StudentNode) {
-        // Only allow dragging if not in path finding mode
-        guard !isPathFindingMode else { return }
         dragStartPositions[node.id] = node.position
     }
     
     func updateNodePosition(_ node: StudentNode, newPosition: CGPoint) {
-        // Only allow position updates if not in path finding mode
-        guard !isPathFindingMode else { return }
-        
         if let index = nodes.firstIndex(where: { $0.id == node.id }) {
             let oldPosition = nodes[index].position
             
@@ -398,9 +396,8 @@ class NetworkState: ObservableObject {
     }
     
     func endNodeDrag(_ node: StudentNode) {
-        // Only process drag end if we have a start position and we're not in path finding mode
-        guard !isPathFindingMode,
-              let startPosition = dragStartPositions[node.id] else { return }
+        // Only process drag end if we have a start position
+        guard let startPosition = dragStartPositions[node.id] else { return }
         
         // If the node was actually moved (not just clicked), push the undo action
         if startPosition != node.position {
@@ -602,5 +599,29 @@ class NetworkState: ObservableObject {
         }
         selectedNodes.removeAll()
         isSelectionMode = false
+    }
+    
+    private func recheckActivePath() {
+        // Only re-route if we're in path finding mode and have both start and end nodes
+        guard isPathFindingMode,
+              let start = startNode,
+              let end = endNode else { return }
+        
+        // Always recalculate to ensure we have the shortest path
+        let newPaths = findPaths(from: start, to: end)
+        if !newPaths.isEmpty {
+            let newPath = newPaths[0]
+            // Only update if the path has actually changed
+            if newPath.map({ $0.id }) != currentPath.map({ $0.id }) {
+                currentPath = newPath
+                print("DEBUG: Path updated to shortest route: \(currentPath.map { $0.name }.joined(separator: " -> "))")
+            }
+        } else {
+            // No valid path exists, clear the path
+            if !currentPath.isEmpty {
+                currentPath = []
+                print("DEBUG: No valid path exists")
+            }
+        }
     }
 } 
