@@ -77,8 +77,7 @@ This created built-in backup systems throughout the network. No single computer 
                         ProgressView("Loading lesson notes...")
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                     } else {
-                        Text(.init(lessonContent))
-                            .font(.body)
+                        MarkdownView(content: lessonContent)
                             .padding()
                     }
                     
@@ -128,7 +127,7 @@ This created built-in backup systems throughout the network. No single computer 
         // Try to load from remote source first, fall back to default
         loadRemoteLessonNotes { remoteContent in
             DispatchQueue.main.async {
-                if let content = remoteContent {
+                if let content = remoteContent, !content.isEmpty {
                     self.lessonContent = content
                 } else {
                     self.lessonContent = self.defaultLessonContent
@@ -140,12 +139,17 @@ This created built-in backup systems throughout the network. No single computer 
     
     private func loadRemoteLessonNotes(completion: @escaping (String?) -> Void) {
         // Remote URL for lesson notes - can be updated by teachers
-        guard let url = URL(string: "https://raw.githubusercontent.com/dkiang/nodes-lesson-notes/main/lesson-notes.md") else {
+        guard let url = URL(string: "https://raw.githubusercontent.com/dkiang/Nodes/main/lesson-notes.md") else {
             completion(nil)
             return
         }
         
+        var hasCompleted = false
+        
         let task = URLSession.shared.dataTask(with: url) { data, response, error in
+            guard !hasCompleted else { return }
+            hasCompleted = true
+            
             if let data = data,
                let content = String(data: data, encoding: .utf8),
                !content.isEmpty {
@@ -157,12 +161,211 @@ This created built-in backup systems throughout the network. No single computer 
         
         task.resume()
         
-        // Timeout after 3 seconds to avoid long waits
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+        // Timeout after 5 seconds to avoid long waits
+        DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
+            guard !hasCompleted else { return }
+            hasCompleted = true
             task.cancel()
             completion(nil)
         }
     }
+    
+}
+
+struct MarkdownView: View {
+    let content: String
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            ForEach(parseMarkdownLines(content), id: \.id) { line in
+                line.view
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+    
+    private func parseMarkdownLines(_ markdown: String) -> [MarkdownLine] {
+        let lines = markdown.components(separatedBy: .newlines)
+        var result: [MarkdownLine] = []
+        
+        for (index, line) in lines.enumerated() {
+            if line.isEmpty {
+                result.append(MarkdownLine(id: index, view: AnyView(Spacer().frame(height: 8))))
+                continue
+            }
+            
+            if line.hasPrefix("#### ") {
+                let text = String(line.dropFirst(5))
+                result.append(MarkdownLine(id: index, view: AnyView(
+                    Text(text)
+                        .font(.headline)
+                        .fontWeight(.bold)
+                        .padding(.top, 8)
+                )))
+            } else if line.hasPrefix("### ") {
+                let text = String(line.dropFirst(4))
+                result.append(MarkdownLine(id: index, view: AnyView(
+                    Text(text)
+                        .font(.title3)
+                        .fontWeight(.bold)
+                        .padding(.top, 8)
+                )))
+            } else if line.hasPrefix("## ") {
+                let text = String(line.dropFirst(3))
+                result.append(MarkdownLine(id: index, view: AnyView(
+                    Text(text)
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .padding(.top, 12)
+                )))
+            } else if line.hasPrefix("# ") {
+                let text = String(line.dropFirst(2))
+                result.append(MarkdownLine(id: index, view: AnyView(
+                    Text(text)
+                        .font(.title)
+                        .fontWeight(.bold)
+                        .padding(.top, 16)
+                )))
+            } else if line.hasPrefix("* ") || line.hasPrefix("- ") {
+                let text = String(line.dropFirst(2))
+                result.append(MarkdownLine(id: index, view: AnyView(
+                    HStack(alignment: .top, spacing: 8) {
+                        Text("•")
+                            .font(.body)
+                            .foregroundColor(.primary)
+                        parseInlineMarkdown(text)
+                            .font(.body)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Spacer()
+                    }
+                    .padding(.leading, 16)
+                )))
+            } else if line.hasPrefix("---") {
+                result.append(MarkdownLine(id: index, view: AnyView(
+                    Divider()
+                        .padding(.vertical, 8)
+                )))
+            } else {
+                result.append(MarkdownLine(id: index, view: AnyView(
+                    parseInlineMarkdown(line)
+                        .font(.body)
+                        .fixedSize(horizontal: false, vertical: true)
+                )))
+            }
+        }
+        
+        return result
+    }
+    
+    private func parseInlineMarkdown(_ text: String) -> Text {
+        // Handle bold text **text** and italic text *text*
+        var result = Text("")
+        var currentText = text
+        
+        while !currentText.isEmpty {
+            // Look for **text** pattern first (bold)
+            if let startRange = currentText.range(of: "**") {
+                // Add text before the bold marker (process for italics)
+                let beforeBold = String(currentText[..<startRange.lowerBound])
+                if !beforeBold.isEmpty {
+                    result = result + parseItalics(beforeBold)
+                }
+                
+                // Look for closing **
+                let afterStart = currentText[startRange.upperBound...]
+                if let endRange = afterStart.range(of: "**") {
+                    // Found closing **, extract bold content
+                    let boldContent = String(afterStart[..<endRange.lowerBound])
+                    result = result + Text(boldContent).bold()
+                    currentText = String(afterStart[endRange.upperBound...])
+                } else {
+                    // No closing **, treat as regular text
+                    result = result + parseItalics("**" + String(afterStart))
+                    break
+                }
+            } else {
+                // No more bold markers, process remaining text for italics
+                result = result + parseItalics(currentText)
+                break
+            }
+        }
+        
+        return result
+    }
+    
+    private func parseItalics(_ text: String) -> Text {
+        // Handle italic text *text* (but not **text**)
+        var result = Text("")
+        var currentText = text
+        
+        while !currentText.isEmpty {
+            // Look for single * that's not part of **
+            if let startRange = currentText.range(of: "*") {
+                // Check if this is part of ** (skip if so)
+                let beforeStar = currentText[..<startRange.lowerBound]
+                let afterStar = currentText[startRange.upperBound...]
+                
+                // Skip if this * is preceded or followed by another * (part of **)
+                let isPartOfDouble = (beforeStar.hasSuffix("*") || afterStar.hasPrefix("*"))
+                
+                if isPartOfDouble {
+                    // Add text including this * and continue
+                    let beforeStarString = String(beforeStar)
+                    if !beforeStarString.isEmpty {
+                        result = result + Text(beforeStarString)
+                    }
+                    result = result + Text("*")
+                    currentText = String(afterStar)
+                } else {
+                    // Add text before the italic marker
+                    let beforeItalic = String(beforeStar)
+                    if !beforeItalic.isEmpty {
+                        result = result + Text(beforeItalic)
+                    }
+                    
+                    // Look for closing * that's not part of **
+                    var foundClosing = false
+                    var searchText = String(afterStar)
+                    
+                    while let endRange = searchText.range(of: "*") {
+                        let beforeEnd = searchText[..<endRange.lowerBound]
+                        let afterEnd = searchText[endRange.upperBound...]
+                        
+                        // Check if this closing * is part of **
+                        if beforeEnd.hasSuffix("*") || afterEnd.hasPrefix("*") {
+                            // This * is part of **, keep searching
+                            searchText = String(afterEnd)
+                            continue
+                        } else {
+                            // Found valid closing *, extract italic content
+                            let italicContent = String(beforeEnd)
+                            result = result + Text(italicContent).italic()
+                            currentText = String(afterEnd)
+                            foundClosing = true
+                            break
+                        }
+                    }
+                    
+                    if !foundClosing {
+                        // No closing *, treat as regular text
+                        result = result + Text("*" + searchText)
+                        break
+                    }
+                }
+            } else {
+                // No more * markers, add remaining text
+                result = result + Text(currentText)
+                break
+            }
+        }
+        
+        return result
+    }
+}
+
+struct MarkdownLine {
+    let id: Int
+    let view: AnyView
 }
 
 struct LessonNotesView_Previews: PreviewProvider {
