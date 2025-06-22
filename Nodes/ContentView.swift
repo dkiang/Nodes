@@ -71,38 +71,12 @@ struct ContentView: View {
                         }
                         .buttonStyle(.bordered)
                         .tint(networkState.isPathFindingMode ? .red : .blue)
-                        
-                        Button(action: { networkState.toggleSelectionMode() }) {
-                            Label(networkState.isSelectionMode ? "Cancel Select" : "Select Nodes", systemImage: "checkmark.circle")
-                        }
-                        .buttonStyle(.bordered)
-                        .tint(networkState.isSelectionMode ? .red : .blue)
                     }
                     
                     if networkState.isPathFindingMode {
                         Text("Select start and end nodes to find paths")
                             .font(.caption)
                             .foregroundColor(.secondary)
-                    }
-                    
-                    if networkState.isSelectionMode && !networkState.selectedNodes.isEmpty {
-                        HStack {
-                            Button(action: {
-                                networkState.activateSelectedNodes()
-                            }) {
-                                Label("Activate Selected", systemImage: "circle")
-                            }
-                            .buttonStyle(.bordered)
-                            .tint(.green)
-                            
-                            Button(action: {
-                                networkState.deactivateSelectedNodes()
-                            }) {
-                                Label("Deactivate Selected", systemImage: "circle.slash")
-                            }
-                            .buttonStyle(.bordered)
-                            .tint(.orange)
-                        }
                     }
                 }
                 .padding()

@@ -49,7 +49,11 @@ A SwiftUI app for visualizing and managing student connections in a classroom ne
 - Batch operations for efficient data handling
 
 ### User Interface
-- Clean, minimal interface without navigation title
+- Clean, minimal interface designed for educational use
+- Simplified two-button control panel
+  - Add Student button for creating new nodes
+  - Find Path button for exploring connections
+- Info button toolbar for lesson notes and administrative functions
 - Optimized Add Student experience
   - Immediate keyboard appearance
   - Automatic text field focus
@@ -58,7 +62,10 @@ A SwiftUI app for visualizing and managing student connections in a classroom ne
 - Improved touch response and gesture handling
 - Enhanced visual feedback for all interactions
 - Smooth animations and transitions
-- Intuitive controls and menu system
+- Educational lesson notes system
+  - Comprehensive teaching materials and classroom activities
+  - Remote content updates via GitHub integration
+  - Professional formatting with discussion questions and assessments
 
 ## Usage
 
@@ -88,12 +95,18 @@ A SwiftUI app for visualizing and managing student connections in a classroom ne
 7. Exit path finding mode to return to normal operation
 
 ### Managing Data
-- Use the menu (ellipsis) in the toolbar to access:
-  - Clear All Data (with confirmation)
-  - Undo (when available)
-  - Find Path mode toggle
+- Use the info button in the toolbar to access lesson notes and administrative functions
+- Undo button appears when actions are available to reverse
+- Clear All Data option available at bottom of lesson notes screen (with confirmation)
 - All changes are automatically saved
 - Data persists between app sessions
+
+### Using Lesson Notes
+- Tap the info button (ⓘ) in the upper right corner
+- Access comprehensive teaching materials and classroom activities
+- View discussion questions and assessment ideas
+- Use the Clear All Data button at the bottom for data management
+- Notes are automatically updated from remote source when available
 
 ## Technical Details
 
@@ -108,6 +121,7 @@ A SwiftUI app for visualizing and managing student connections in a classroom ne
 - Persistent undo stack
 - Automatic data synchronization
 - Efficient batch operations
+- Optimized startup performance with simplified CoreData loading
 
 ### UI Components
 - Custom node and connection views
@@ -115,6 +129,8 @@ A SwiftUI app for visualizing and managing student connections in a classroom ne
 - Smooth animations
 - Responsive layout
 - Accessible controls
+- Educational lesson notes view with remote content capability
+- Simplified control interface optimized for classroom use
 
 ## Requirements
 - iOS 15.0+

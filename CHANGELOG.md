@@ -40,6 +40,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Enhanced haptic feedback system
 - Dedicated AddStudentView component for better state management
 - Immediate keyboard appearance when adding new students
+- Educational lesson notes system
+  - Comprehensive teaching materials and activities
+  - Remote content update capability via GitHub
+  - Professional markdown formatting for easy reading
+- Simplified user interface design
+  - Clean two-button control panel (Add Student and Find Path only)
+  - Info button for accessing lesson notes and administrative functions
+  - Streamlined toolbar with essential functions only
 
 ### Changed
 - Updated connection management to replace existing connections
@@ -62,6 +70,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Enhanced gesture handling for better touch response
 - Optimized Add Student sheet presentation and performance
 - Improved keyboard handling and focus management
+- Complete user interface redesign for educational use
+  - Replaced complex menu system with simple info button
+  - Moved Clear All Data function to lesson notes screen
+  - Simplified control panel to focus on core functions
+  - Removed selection mode functionality from main interface
+- Enhanced lesson notes integration
+  - Fallback to default content when remote content unavailable
+  - Quick access through info button in toolbar
+  - Consolidated administrative functions in notes view
 
 ### Fixed
 - Connection persistence during node dragging
@@ -87,6 +104,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - NetworkState scope management
 - Keyboard focus and appearance in Add Student sheet
 - Sheet presentation performance and responsiveness
+- App startup performance issues
+  - Eliminated 10+ second white screen at launch
+  - Simplified CoreData initialization for faster loading
+  - Removed complex async patterns that were blocking UI
+  - Optimized synchronous data loading for immediate responsiveness
 
 ## [0.1.0] - 2024-05-13
 
