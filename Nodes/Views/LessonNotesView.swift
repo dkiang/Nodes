@@ -13,7 +13,6 @@ struct LessonNotesView: View {
     @ObservedObject var networkState: NetworkState
     @State private var lessonContent: String = ""
     @State private var isLoading: Bool = true
-    @State private var showingClearAlert: Bool = false
     
     private let defaultLessonContent = """
 Quick summary
@@ -82,22 +81,6 @@ This created built-in backup systems throughout the network. No single computer 
                     }
                     
                     Spacer()
-                    
-                    // Clear all data button at bottom
-                    VStack(spacing: 8) {
-                        Divider()
-                        
-                        Button(action: {
-                            showingClearAlert = true
-                        }) {
-                            Label("Clear All Data", systemImage: "trash")
-                                .foregroundColor(.red)
-                        }
-                        .buttonStyle(.bordered)
-                        .tint(.red)
-                        .padding(.horizontal)
-                        .padding(.bottom)
-                    }
                 }
             }
             .navigationTitle("Lesson Notes")
@@ -108,15 +91,6 @@ This created built-in backup systems throughout the network. No single computer 
             )
             .onAppear {
                 loadLessonNotes()
-            }
-            .alert("Clear All Data", isPresented: $showingClearAlert) {
-                Button("Cancel", role: .cancel) { }
-                Button("Clear", role: .destructive) {
-                    networkState.clearAllData()
-                    isPresented = false
-                }
-            } message: {
-                Text("Are you sure you want to clear all nodes and connections? This action cannot be undone.")
             }
         }
     }

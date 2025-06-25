@@ -36,6 +36,7 @@ struct ContentView: View {
     @State private var newStudentName = ""
     @State private var showingPathAlert = false
     @State private var showingLessonNotes = false
+    @State private var showingClearAlert = false
     @FocusState private var isStudentNameFocused: Bool
     init() {
         let context = PersistenceController.shared.container.viewContext
@@ -112,13 +113,31 @@ struct ContentView: View {
                             }
                         }
                         
-                        Button(action: {
-                            showingLessonNotes = true
-                        }) {
-                            Image(systemName: "info.circle")
+                        Menu {
+                            Button(action: {
+                                showingLessonNotes = true
+                            }) {
+                                Label("About", systemImage: "info.circle")
+                            }
+                            
+                            Button(role: .destructive, action: {
+                                showingClearAlert = true
+                            }) {
+                                Label("Clear All", systemImage: "trash")
+                            }
+                        } label: {
+                            Image(systemName: "ellipsis.circle")
                         }
                     }
                 }
+            }
+            .alert("Clear All Data", isPresented: $showingClearAlert) {
+                Button("Cancel", role: .cancel) { }
+                Button("Clear All", role: .destructive) {
+                    networkState.clearAllData()
+                }
+            } message: {
+                Text("Are you sure you want to clear all nodes and connections? This action cannot be undone.")
             }
         }
     }

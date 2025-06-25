@@ -61,6 +61,7 @@ class NetworkState: ObservableObject {
     @Published var isSelectionMode: Bool = false
     @Published var selectedNodes: Set<UUID> = []
     
+    
     // View size tracking
     @Published var currentViewSize: CGSize = .zero
     @Published var lastViewSize: CGSize = .zero
@@ -93,11 +94,11 @@ class NetworkState: ObservableObject {
     
     init(context: NSManagedObjectContext) {
         self.viewContext = context
-        // Load nodes immediately with optimized query
+        // Load nodes immediately for fast startup
         loadNodes()
     }
     
-    // Optimized synchronous loading for immediate startup
+    // Optimized synchronous loading
     private func loadNodes() {
         let fetchRequest: NSFetchRequest<NodeEntity> = NodeEntity.fetchRequest()
         fetchRequest.relationshipKeyPathsForPrefetching = ["connections"]
@@ -149,12 +150,35 @@ class NetworkState: ObservableObject {
     }
     
     func clearAllData() {
-        let fetchRequest = NSFetchRequest<NSFetchRequestResult>(entityName: "NodeEntity")
-        let deleteRequest = NSBatchDeleteRequest(fetchRequest: fetchRequest)
+        // Clear connections first
+        let connectionFetchRequest = NSFetchRequest<NSFetchRequestResult>(entityName: "ConnectionEntity")
+        let connectionDeleteRequest = NSBatchDeleteRequest(fetchRequest: connectionFetchRequest)
+        connectionDeleteRequest.resultType = .resultTypeObjectIDs
         
         do {
-            try viewContext.execute(deleteRequest)
+            let connectionResult = try viewContext.execute(connectionDeleteRequest) as? NSBatchDeleteResult
+            if let objectIDs = connectionResult?.result as? [NSManagedObjectID] {
+                NSManagedObjectContext.mergeChanges(fromRemoteContextSave: [NSDeletedObjectsKey: objectIDs], into: [viewContext])
+            }
+        } catch {
+            print("Error clearing connections: \(error)")
+        }
+        
+        // Clear nodes
+        let nodeFetchRequest = NSFetchRequest<NSFetchRequestResult>(entityName: "NodeEntity")
+        let nodeDeleteRequest = NSBatchDeleteRequest(fetchRequest: nodeFetchRequest)
+        nodeDeleteRequest.resultType = .resultTypeObjectIDs
+        
+        do {
+            let nodeResult = try viewContext.execute(nodeDeleteRequest) as? NSBatchDeleteResult
+            if let objectIDs = nodeResult?.result as? [NSManagedObjectID] {
+                NSManagedObjectContext.mergeChanges(fromRemoteContextSave: [NSDeletedObjectsKey: objectIDs], into: [viewContext])
+            }
+            
+            // Force save the context
             try viewContext.save()
+            
+            // Clear in-memory state
             nodes.removeAll()
             selectedNode = nil
             connectionStartNode = nil
@@ -162,8 +186,16 @@ class NetworkState: ObservableObject {
             endNode = nil
             currentPath.removeAll()
             undoStack.removeAll()
+            
+            print("Successfully cleared all data")
         } catch {
             print("Error clearing data: \(error)")
+            print("Error details: \(error.localizedDescription)")
+            if let nsError = error as NSError? {
+                print("Error domain: \(nsError.domain)")
+                print("Error code: \(nsError.code)")
+                print("Error userInfo: \(nsError.userInfo)")
+            }
         }
     }
     

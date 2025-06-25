@@ -54,11 +54,14 @@ struct PersistenceController {
             container.persistentStoreDescriptions.first!.url = URL(fileURLWithPath: "/dev/null")
         }
         
-        // Simple CoreData configuration for fast startup
+        // Configure CoreData with proper permissions and history tracking
         container.persistentStoreDescriptions.forEach { storeDescription in
             storeDescription.shouldMigrateStoreAutomatically = true
             storeDescription.shouldInferMappingModelAutomatically = true
-            // Remove complex options that slow down startup
+            
+            // Add persistent history tracking to resolve permission issues
+            storeDescription.setOption(true as NSNumber, forKey: NSPersistentHistoryTrackingKey)
+            storeDescription.setOption(true as NSNumber, forKey: NSPersistentStoreRemoteChangeNotificationPostOptionKey)
         }
         
         container.loadPersistentStores(completionHandler: { (storeDescription, error) in
